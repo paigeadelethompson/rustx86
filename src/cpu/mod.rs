@@ -9,19 +9,19 @@ pub use flags::Flags;
 
 use crate::memory::Memory;
 use crate::serial::Serial;
-use crate::disk::Disk;
+use crate::disk::DiskImage;
 
 pub struct CPU {
     pub regs: Registers,
     pub memory: Memory,
     pub serial: Serial,
-    pub disk: Disk,
+    pub disk: DiskImage,
     pub cycles: u64,
     halted: bool,
 }
 
 impl CPU {
-    pub fn new(memory: Memory, serial: Serial, disk: Disk) -> Self {
+    pub fn new(memory: Memory, serial: Serial, disk: DiskImage) -> Self {
         CPU {
             memory,
             serial,
