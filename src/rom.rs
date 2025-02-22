@@ -13,16 +13,30 @@ impl BiosRom {
             0x53,             // PUSH BX
             0x51,             // PUSH CX
             0x52,             // PUSH DX
-            0x80, 0xFC, 0x01, // CMP AH, 0x01 (write character)
-            0x75, 0x09,       // JNE skip_write
-            // Handle serial write
-            0xB2, 0x00,       // MOV DL, 0 (COM1)
-            0xE6, 0x3F,       // OUT 0x3F8, AL (write to COM1)
+            0x80, 0xFC, 0x00, // CMP AH, 0x00 (initialize port)
+            0x75, 0x0F,       // JNE not_init
+            // Handle initialization
             0xB4, 0x00,       // MOV AH, 0 (success)
-            0xEB, 0x03,       // JMP done
+            0xB0, 0x03,       // MOV AL, 0x03 (port initialized)
+            0x5A,             // POP DX
+            0x59,             // POP CX
+            0x5B,             // POP BX
+            0x58,             // POP AX
+            0xCF,             // IRET
+            // not_init:
+            0x80, 0xFC, 0x01, // CMP AH, 0x01 (write character)
+            0x75, 0x0F,       // JNE skip_write
+            // Handle serial write
+            0xBA, 0xF8, 0x03, // MOV DX, 0x3F8 (COM1)
+            0xEE,             // OUT DX, AL
+            0xB4, 0x00,       // MOV AH, 0 (success)
+            0x5A,             // POP DX
+            0x59,             // POP CX
+            0x5B,             // POP BX
+            0x58,             // POP AX
+            0xCF,             // IRET
             // skip_write:
-            0x90, 0x90, 0x90, // NOP padding
-            // done:
+            0xB4, 0x01,       // MOV AH, 1 (error - unsupported function)
             0x5A,             // POP DX
             0x59,             // POP CX
             0x5B,             // POP BX
@@ -88,16 +102,30 @@ impl BiosRom {
             0x53,             // PUSH BX
             0x51,             // PUSH CX
             0x52,             // PUSH DX
-            0x80, 0xFC, 0x01, // CMP AH, 0x01 (write character)
-            0x75, 0x09,       // JNE skip_write
-            // Handle serial write
-            0xB2, 0x00,       // MOV DL, 0 (COM1)
-            0xE6, 0x3F,       // OUT 0x3F8, AL (write to COM1)
+            0x80, 0xFC, 0x00, // CMP AH, 0x00 (initialize port)
+            0x75, 0x0F,       // JNE not_init
+            // Handle initialization
             0xB4, 0x00,       // MOV AH, 0 (success)
-            0xEB, 0x03,       // JMP done
+            0xB0, 0x03,       // MOV AL, 0x03 (port initialized)
+            0x5A,             // POP DX
+            0x59,             // POP CX
+            0x5B,             // POP BX
+            0x58,             // POP AX
+            0xCF,             // IRET
+            // not_init:
+            0x80, 0xFC, 0x01, // CMP AH, 0x01 (write character)
+            0x75, 0x0F,       // JNE skip_write
+            // Handle serial write
+            0xBA, 0xF8, 0x03, // MOV DX, 0x3F8 (COM1)
+            0xEE,             // OUT DX, AL
+            0xB4, 0x00,       // MOV AH, 0 (success)
+            0x5A,             // POP DX
+            0x59,             // POP CX
+            0x5B,             // POP BX
+            0x58,             // POP AX
+            0xCF,             // IRET
             // skip_write:
-            0x90, 0x90, 0x90, // NOP padding
-            // done:
+            0xB4, 0x01,       // MOV AH, 1 (error - unsupported function)
             0x5A,             // POP DX
             0x59,             // POP CX
             0x5B,             // POP BX

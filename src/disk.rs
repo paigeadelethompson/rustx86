@@ -410,42 +410,61 @@ impl DiskImage {
             0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x41,      // MOV AL, 'A'
             0xCD, 0x14,      // INT 0x14        (Serial services)
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x74,      // MOV AL, 't'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x74,      // MOV AL, 't'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x65,      // MOV AL, 'e'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x6D,      // MOV AL, 'm'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x70,      // MOV AL, 'p'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x74,      // MOV AL, 't'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x69,      // MOV AL, 'i'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x6E,      // MOV AL, 'n'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x67,      // MOV AL, 'g'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x20,      // MOV AL, ' '
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x74,      // MOV AL, 't'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x6F,      // MOV AL, 'o'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x20,      // MOV AL, ' '
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x62,      // MOV AL, 'b'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x6F,      // MOV AL, 'o'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x6F,      // MOV AL, 'o'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x74,      // MOV AL, 't'
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x0D,      // MOV AL, CR
             0xCD, 0x14,      // INT 0x14
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
             0xB0, 0x0A,      // MOV AL, LF
             0xCD, 0x14,      // INT 0x14
             0xF4,            // HLT

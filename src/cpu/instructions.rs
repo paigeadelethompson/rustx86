@@ -65,6 +65,9 @@ impl CPU {
     }
 
     pub(super) fn int_n(&mut self, int_num: u8) -> Result<(), String> {
+        //println!("[CPU::int_n] Handling interrupt {:02X}h", int_num);
+        //println!("[CPU::int_n] AH={:02X}h AL={:02X}h", self.regs.get_ah(), self.regs.get_al());
+        
         // Push flags
         self.push_word(self.regs.flags.value)?;
         
@@ -72,14 +75,9 @@ impl CPU {
         self.push_word(self.regs.cs)?;
         self.push_word(self.regs.ip)?;
         
-        // Get interrupt vector
-        let vector_addr = (int_num as u32) * 4;
-        let offset = self.memory.read_word(vector_addr);
-        let segment = self.memory.read_word(vector_addr + 2);
-        
-        // Jump to interrupt handler
-        self.regs.ip = offset;
-        self.regs.cs = segment;
+        // Call our Rust interrupt handler
+        use crate::bios::handle_bios_interrupt;
+        handle_bios_interrupt(self, int_num)?;
         
         // Clear IF and TF flags
         self.regs.flags.set_interrupt(false);
@@ -323,19 +321,19 @@ impl CPU {
     }
 
     pub(super) fn push_bx(&mut self) -> Result<(), String> {
-        println!("[CPU::push_bx]: Pushing {:#06X} to stack", self.regs.bx);
+        //println!("[CPU::push_bx]: Pushing {:#06X} to stack", self.regs.bx);
         self.push_word(self.regs.bx)?;
         Ok(())
     }
 
     pub(super) fn push_cx(&mut self) -> Result<(), String> {
-        println!("[CPU::push_cx]: Pushing {:#06X} to stack", self.regs.cx);
+        //println!("[CPU::push_cx]: Pushing {:#06X} to stack", self.regs.cx);
         self.push_word(self.regs.cx)?;
         Ok(())
     }
 
     pub(super) fn push_dx(&mut self) -> Result<(), String> {
-        println!("[CPU::push_dx]: Pushing {:#06X} to stack", self.regs.dx);
+        //println!("[CPU::push_dx]: Pushing {:#06X} to stack", self.regs.dx);
         self.push_word(self.regs.dx)?;
         Ok(())
     }
@@ -567,7 +565,7 @@ impl CPU {
     }
 
     pub(super) fn push_ax(&mut self) -> Result<(), String> {
-        println!("[CPU::push_ax]: Pushing {:#06X} to stack", self.regs.ax);
+        //println!("[CPU::push_ax]: Pushing {:#06X} to stack", self.regs.ax);
         self.push_word(self.regs.ax)?;
         Ok(())
     }
@@ -594,28 +592,28 @@ impl CPU {
 
     pub(super) fn pop_ax(&mut self) -> Result<(), String> {
         let value = self.pop_word()?;
-        println!("[CPU::pop_ax]: Popping {:#06X} from stack", value);
+        //println!("[CPU::pop_ax]: Popping {:#06X} from stack", value);
         self.regs.ax = value;
         Ok(())
     }
 
     pub(super) fn pop_cx(&mut self) -> Result<(), String> {
         let value = self.pop_word()?;
-        println!("[CPU::pop_cx]: Popping {:#06X} from stack", value);
+        //println!("[CPU::pop_cx]: Popping {:#06X} from stack", value);
         self.regs.cx = value;
         Ok(())
     }
 
     pub(super) fn pop_dx(&mut self) -> Result<(), String> {
         let value = self.pop_word()?;
-        println!("[CPU::pop_dx]: Popping {:#06X} from stack", value);
+        //println!("[CPU::pop_dx]: Popping {:#06X} from stack", value);
         self.regs.dx = value;
         Ok(())
     }
 
     pub(super) fn pop_bx(&mut self) -> Result<(), String> {
         let value = self.pop_word()?;
-        println!("[CPU::pop_bx]: Popping {:#06X} from stack", value);
+        //println!("[CPU::pop_bx]: Popping {:#06X} from stack", value);
         self.regs.bx = value;
         Ok(())
     }
@@ -1390,32 +1388,62 @@ impl CPU {
     // I/O operations
     pub(super) fn in_ax_imm8(&mut self) -> Result<(), String> {
         let port = self.fetch_byte()? as u16;
+        println!("[CPU::in_ax_imm8] Reading from port {:#04X}", port);
         let value = (self.serial.read_byte() as u16) << 8 | self.serial.read_byte() as u16;
         self.regs.ax = value;
+        println!("[CPU::in_ax_imm8] Read value {:#06X}", value);
         Ok(())
     }
 
     pub(super) fn out_imm8_al(&mut self) -> Result<(), String> {
         let port = self.fetch_byte()? as u16;
-        self.serial.write_byte(self.regs.ax as u8);
+        println!("[CPU::out_imm8_al] Writing to port {:#04X}, value={:#04X} ('{}')", 
+                 port, self.regs.get_al(), self.regs.get_al() as char);
+        if port == 0x3F8 {  // COM1 data port
+            println!("[CPU::out_imm8_al] Writing to COM1 port");
+            self.serial.write_byte(self.regs.get_al());
+            println!("[CPU::out_imm8_al] Write complete");
+        } else if port >= 0x3F9 && port <= 0x3FF {  // Other COM1 registers
+            println!("[CPU::out_imm8_al] Writing to COM1 register {:#04X}", port - 0x3F8);
+            // Handle COM1 register writes if needed
+        } else {
+            println!("[CPU::out_imm8_al] Ignoring write to non-COM1 port");
+        }
         Ok(())
     }
 
     pub(super) fn out_imm8_ax(&mut self) -> Result<(), String> {
         let port = self.fetch_byte()? as u16;
+        println!("[CPU::out_imm8_ax] Writing to port {:#04X}, value={:#06X}", port, self.regs.ax);
         self.serial.write_byte((self.regs.ax >> 8) as u8);
         self.serial.write_byte(self.regs.ax as u8);
+        println!("[CPU::out_imm8_ax] Write complete");
         Ok(())
     }
 
     pub(super) fn out_dx_al(&mut self) -> Result<(), String> {
-        self.serial.write_byte(self.regs.ax as u8);
+        let port = self.regs.dx;
+        println!("[CPU::out_dx_al] Writing to port {:#04X}, value={:#04X} ('{}')", 
+                 port, self.regs.get_al(), self.regs.get_al() as char);
+        if port == 0x3F8 {  // COM1 data port
+            println!("[CPU::out_dx_al] Writing to COM1 port");
+            self.serial.write_byte(self.regs.get_al());
+            println!("[CPU::out_dx_al] Write complete");
+        } else if port >= 0x3F9 && port <= 0x3FF {  // Other COM1 registers
+            println!("[CPU::out_dx_al] Writing to COM1 register {:#04X}", port - 0x3F8);
+            // Handle COM1 register writes if needed
+        } else {
+            println!("[CPU::out_dx_al] Ignoring write to non-COM1 port");
+        }
         Ok(())
     }
 
     pub(super) fn out_dx_ax(&mut self) -> Result<(), String> {
+        let port = self.regs.dx;
+        println!("[CPU::out_dx_ax] Writing to port {:#04X}, value={:#06X}", port, self.regs.ax);
         self.serial.write_byte((self.regs.ax >> 8) as u8);
         self.serial.write_byte(self.regs.ax as u8);
+        println!("[CPU::out_dx_ax] Write complete");
         Ok(())
     }
 

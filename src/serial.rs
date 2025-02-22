@@ -300,23 +300,30 @@ impl Serial {
     }
 
     pub fn read_byte(&mut self) -> u8 {
-        self.input_buffer.pop_front().unwrap_or(0)
+        let value = self.input_buffer.pop_front().unwrap_or(0);
+        // println!("[Serial::read_byte] Read value {:#04X}", value);
+        value
     }
 
     pub fn write_byte(&mut self, value: u8) {
-        print!("{}", value as char);
-        let _ = std::io::stdout().flush();
+        // println!("[Serial::write_byte] Writing value {:#04X} ('{}') to output buffer", value, value as char);
+        self.output_buffer.push_back(value & 0xFF);
     }
 
     pub fn has_data(&self) -> bool {
-        !self.input_buffer.is_empty()
+        let has_data = !self.input_buffer.is_empty();
+        // println!("[Serial::has_data] Input buffer has data: {}", has_data);
+        has_data
     }
 
     pub fn add_input(&mut self, byte: u8) {
+        // println!("[Serial::add_input] Adding byte {:#04X} to input buffer", byte);
         self.input_buffer.push_back(byte);
     }
 
     pub fn get_output(&mut self) -> Option<u8> {
-        self.output_buffer.pop_front()
+        let value = self.output_buffer.pop_front();
+        // println!("[Serial::get_output] Getting output value: {:?}", value.map(|v| format!("{:#04X} ('{}')", v, v as char)));
+        value
     }
 } 
