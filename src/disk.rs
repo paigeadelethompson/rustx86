@@ -353,8 +353,8 @@ impl DiskImage {
             data
         } else {
             let data = Self::create_default_mbr();
-            let mut file = File::create(&mbr_path)?;
-            file.write_all(&data)?;
+            // let mut file = File::create(&mbr_path)?;
+            // file.write_all(&data)?;
             data
         };
 
@@ -366,8 +366,8 @@ impl DiskImage {
             data
         } else {
             let data = Self::create_default_boot_sector();
-            let mut file = File::create(&boot_sector_path)?;
-            file.write_all(&data)?;
+            // let mut file = File::create(&boot_sector_path)?;
+            // file.write_all(&data)?;
             data
         };
 
@@ -397,14 +397,58 @@ impl DiskImage {
         let mut mbr = [0u8; SECTOR_SIZE];
         
         // Real MS-DOS MBR code that searches for active partition and loads it
+        // note: if you change this, delete drive_c/mbr.bin and drive_c/boot_sector.bin
         let boot_code = [
+            // 0xF4,            // HLT
             0xFA,             // CLI - Disable interrupts
             0x33, 0xC0,      // XOR AX, AX
             0x8E, 0xD0,      // MOV SS, AX
             0xBC, 0x00, 0x7C, // MOV SP, 0x7C00
             0x8E, 0xD8,      // MOV DS, AX
             0x8E, 0xC0,      // MOV ES, AX
-            
+            // Print "Attempting to boot" message using serial port
+            0xB4, 0x01,      // MOV AH, 0x01    (Serial port write char)
+            0xB0, 0x41,      // MOV AL, 'A'
+            0xCD, 0x14,      // INT 0x14        (Serial services)
+            0xB0, 0x74,      // MOV AL, 't'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x74,      // MOV AL, 't'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x65,      // MOV AL, 'e'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x6D,      // MOV AL, 'm'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x70,      // MOV AL, 'p'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x74,      // MOV AL, 't'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x69,      // MOV AL, 'i'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x6E,      // MOV AL, 'n'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x67,      // MOV AL, 'g'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x20,      // MOV AL, ' '
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x74,      // MOV AL, 't'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x6F,      // MOV AL, 'o'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x20,      // MOV AL, ' '
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x62,      // MOV AL, 'b'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x6F,      // MOV AL, 'o'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x6F,      // MOV AL, 'o'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x74,      // MOV AL, 't'
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x0D,      // MOV AL, CR
+            0xCD, 0x14,      // INT 0x14
+            0xB0, 0x0A,      // MOV AL, LF
+            0xCD, 0x14,      // INT 0x14
+            0xF4,            // HLT
             // Read partition table entries
             0xBE, 0xBE, 0x7C, // MOV SI, 0x7CBE (partition table offset)
             0xBF, 0xBE, 0x07, // MOV DI, 0x7BE  (another pointer to partition table)
@@ -427,7 +471,7 @@ impl DiskImage {
             0xCD, 0x10,      // INT 0x10        (BIOS video service)
             0xB0, 0x6F,      // MOV AL, 'o'
             0xCD, 0x10,      // INT 0x10
-            0xEB, 0xFE,      // JMP $ (hang)
+            0xF4,            // HLT             (instead of JMP $)
             
             // Found active partition - load its boot sector
             0x5E,            // POP SI
@@ -445,7 +489,7 @@ impl DiskImage {
             0xB4, 0x0E,      // MOV AH, 0x0E
             0xB0, 0x45,      // MOV AL, 'E'
             0xCD, 0x10,      // INT 0x10
-            0xEB, 0xFE,      // JMP $ (hang)
+            0xF4,            // HLT             (instead of JMP $)
             
             // Success - jump to loaded boot sector
             0xEA, 0x00, 0x7C, 0x00, 0x00  // JMP 0000:7C00
@@ -547,6 +591,11 @@ impl DiskImage {
     }
 
     pub fn read_sector(&mut self, sector: u32) -> Option<&[u8]> {
+        // Special case: sector 0 is the MBR
+        if sector == 0 {
+            return Some(&self.mbr);
+        }
+
         match self.sector_to_region(sector) {
             DiskRegion::BootSector => Some(&self.boot_sector),
             DiskRegion::FAT1 | DiskRegion::FAT2 => {
@@ -573,8 +622,8 @@ impl DiskImage {
             if self.detect_fdisk_mbr(data) {
                 // FDISK /MBR detected - update MBR but don't clear filesystem
                 self.mbr.copy_from_slice(data);
-                let mut file = File::create(self.fs_path.parent().unwrap().join("mbr.bin"))?;
-                file.write_all(data)?;
+                // let mut file = File::create(self.fs_path.parent().unwrap().join("mbr.bin"))?;
+                // file.write_all(data)?;
             }
             return Ok(());
         }
@@ -594,8 +643,8 @@ impl DiskImage {
                     self.bpb = BiosParameterBlock::from_boot_sector(data);
                     
                     // Save boot sector
-                    let mut file = File::create(self.fs_path.parent().unwrap().join("boot_sector.bin"))?;
-                    file.write_all(data)?;
+                    // let mut file = File::create(self.fs_path.parent().unwrap().join("boot_sector.bin"))?;
+                    // file.write_all(data)?;
 
                     // Clear filesystem
                     self.handle_format()?;

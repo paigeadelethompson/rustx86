@@ -6,10 +6,10 @@ pub struct Registers {
     pub bx: u16,
     pub cx: u16,
     pub dx: u16,
+    pub sp: u16,
+    pub bp: u16,
     pub si: u16,
     pub di: u16,
-    pub bp: u16,
-    pub sp: u16,
     pub cs: u16,
     pub ds: u16,
     pub es: u16,
@@ -25,10 +25,10 @@ impl Registers {
             bx: 0,
             cx: 0,
             dx: 0,
+            sp: 0,
+            bp: 0,
             si: 0,
             di: 0,
-            bp: 0,
-            sp: 0,
             cs: 0xF000,
             ds: 0,
             es: 0,
@@ -38,69 +38,92 @@ impl Registers {
         }
     }
 
-    pub fn get_bx(&self) -> u16 {
-        self.bx
-    }
-
-    pub fn get_si(&self) -> u16 {
-        self.si
-    }
-
-    pub fn get_di(&self) -> u16 {
-        self.di
-    }
-
-    pub fn get_bp(&self) -> u16 {
-        self.bp
+    pub fn get_ah(&self) -> u8 {
+        (self.ax >> 8) as u8
     }
 
     pub fn get_al(&self) -> u8 {
         (self.ax & 0xFF) as u8
     }
 
-    pub fn get_ah(&self) -> u8 {
-        ((self.ax >> 8) & 0xFF) as u8
+    pub fn get_bh(&self) -> u8 {
+        (self.bx >> 8) as u8
     }
 
-    pub fn set_al(&mut self, value: u8) {
-        self.ax = (self.ax & 0xFF00) | (value as u16);
-        println!("set_al: Setting AL to 0x{:02X}, AX is now 0x{:04X}", value, self.ax);
+    pub fn get_bl(&self) -> u8 {
+        (self.bx & 0xFF) as u8
     }
 
-    pub fn set_ah(&mut self, value: u8) {
-        self.ax = (self.ax & 0x00FF) | ((value as u16) << 8);
+    pub fn get_ch(&self) -> u8 {
+        (self.cx >> 8) as u8
     }
 
     pub fn get_cl(&self) -> u8 {
         (self.cx & 0xFF) as u8
     }
 
-    pub fn get_ch(&self) -> u8 {
-        ((self.cx >> 8) & 0xFF) as u8
-    }
-
-    pub fn set_cl(&mut self, value: u8) {
-        self.cx = (self.cx & 0xFF00) | (value as u16);
-    }
-
-    pub fn set_ch(&mut self, value: u8) {
-        self.cx = (self.cx & 0x00FF) | ((value as u16) << 8);
+    pub fn get_dh(&self) -> u8 {
+        (self.dx >> 8) as u8
     }
 
     pub fn get_dl(&self) -> u8 {
         (self.dx & 0xFF) as u8
     }
 
-    pub fn get_dh(&self) -> u8 {
-        ((self.dx >> 8) & 0xFF) as u8
+    pub fn set_ah(&mut self, value: u8) {
+        self.ax = (self.ax & 0x00FF) | ((value as u16) << 8);
+    }
+
+    pub fn set_al(&mut self, value: u8) {
+        self.ax = (self.ax & 0xFF00) | (value as u16);
+    }
+
+    pub fn set_bh(&mut self, value: u8) {
+        self.bx = (self.bx & 0x00FF) | ((value as u16) << 8);
+    }
+
+    pub fn set_bl(&mut self, value: u8) {
+        self.bx = (self.bx & 0xFF00) | (value as u16);
+    }
+
+    pub fn set_ch(&mut self, value: u8) {
+        self.cx = (self.cx & 0x00FF) | ((value as u16) << 8);
+    }
+
+    pub fn set_cl(&mut self, value: u8) {
+        self.cx = (self.cx & 0xFF00) | (value as u16);
+    }
+
+    pub fn set_dh(&mut self, value: u8) {
+        self.dx = (self.dx & 0x00FF) | ((value as u16) << 8);
     }
 
     pub fn set_dl(&mut self, value: u8) {
         self.dx = (self.dx & 0xFF00) | (value as u16);
     }
 
-    pub fn set_dh(&mut self, value: u8) {
-        self.dx = (self.dx & 0x00FF) | ((value as u16) << 8);
+    pub fn get_ax(&self) -> u16 {
+        self.ax
+    }
+
+    pub fn get_bx(&self) -> u16 {
+        self.bx
+    }
+
+    pub fn get_cx(&self) -> u16 {
+        self.cx
+    }
+
+    pub fn get_dx(&self) -> u16 {
+        self.dx
+    }
+
+    pub fn set_ax(&mut self, value: u16) {
+        self.ax = value;
+    }
+
+    pub fn set_bx(&mut self, value: u16) {
+        self.bx = value;
     }
 
     pub fn set_cx(&mut self, value: u16) {
@@ -109,6 +132,22 @@ impl Registers {
 
     pub fn set_dx(&mut self, value: u16) {
         self.dx = value;
+    }
+
+    pub fn set_sp(&mut self, value: u16) {
+        self.sp = value;
+    }
+
+    pub fn set_bp(&mut self, value: u16) {
+        self.bp = value;
+    }
+
+    pub fn set_si(&mut self, value: u16) {
+        self.si = value;
+    }
+
+    pub fn set_di(&mut self, value: u16) {
+        self.di = value;
     }
 
     pub fn get_reg8(&self, reg: u8) -> u8 {
@@ -155,10 +194,6 @@ impl Registers {
         self.set_reg8((reg & 0x3) | 0x4, value)  // Bottom 2 bits select AH, CH, DH, BH
     }
 
-    pub fn get_dx(&self) -> u16 {
-        self.dx
-    }
-
     pub fn get_reg16(&self, reg: u8) -> u16 {
         match reg {
             0 => self.ax,
@@ -169,6 +204,20 @@ impl Registers {
             5 => self.bp,
             6 => self.si,
             7 => self.di,
+            _ => panic!("Invalid register index"),
+        }
+    }
+
+    pub fn set_reg16(&mut self, reg: u8, value: u16) {
+        match reg {
+            0 => self.ax = value,
+            1 => self.cx = value,
+            2 => self.dx = value,
+            3 => self.bx = value,
+            4 => self.sp = value,
+            5 => self.bp = value,
+            6 => self.si = value,
+            7 => self.di = value,
             _ => panic!("Invalid register index"),
         }
     }

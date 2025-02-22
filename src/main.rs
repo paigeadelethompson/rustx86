@@ -52,86 +52,92 @@ use memory::Memory;
 use serial::Serial;
 use disk::DiskImage;
 use rom::BiosRom;
+use std::io::{self, Read, Write};
+use std::time::Duration;
 
 fn main() -> Result<(), String> {
-    println!("Starting DOS emulator...");
+    // println!("Starting DOS emulator...");
     
     // Initialize components
     let mut memory = Memory::new(1024 * 1024); // 1MB RAM
     let serial = Serial::new();
     
+    // Load BIOS ROM first
+    let bios_rom = BiosRom::new();
+    memory.load_rom(bios_rom);
+    
     // Initialize disk with drive_c path
     let drive_c_path = PathBuf::from("drive_c");
-    let disk = DiskImage::new(&drive_c_path)
+    let mut disk = DiskImage::new(&drive_c_path)
         .map_err(|e| format!("Failed to initialize disk: {}", e))?;
 
-    // Load BIOS ROM
-    let bios_rom = BiosRom::new();
-    memory.load_rom(bios_rom.as_slice());
+    // Load MBR (sector 0) into memory at 0x7C00
+    let mbr = disk.read_sector(0)
+        .ok_or("Failed to read MBR")?;
+    memory.load_boot_sector(mbr);
 
-    // Initialize CPU
+    // Initialize CPU with memory that already has ROM loaded
     let mut cpu = CPU::new(memory, serial, disk);
-    
+
     // Initialize BIOS interrupts and data area
     bios::init_bios_interrupts(&mut cpu);
     bios::init_bios_data_area(&mut cpu);
 
-    println!("Initial CPU state - CS:IP = {:04X}:{:04X}", cpu.regs.cs, cpu.regs.ip);
+    // Now reset the CPU to start at F000:FFF0
+    cpu.reset();
 
-    // Run CPU until halted or max cycles reached
-    let max_cycles = -1; // -1 for infinite execution
+    // println!("\n=== Starting CPU Execution ===");
+    // println!("Initial CS:IP = F000:FFF0");
+
+    // Set up stdin for non-blocking reads
+    let mut stdin = io::stdin();
+    let _ = termios::Termios::from_fd(0).map(|mut t| {
+        t.c_lflag &= !(termios::ICANON | termios::ECHO);
+        t.c_cc[termios::VMIN] = 0;
+        t.c_cc[termios::VTIME] = 0;
+        let _ = termios::tcsetattr(0, termios::TCSANOW, &t);
+    });
+
+    // Run CPU for fixed number of cycles
+    let max_cycles = 0;
     let mut cycles = 0;
     
     loop {
-        let cs = cpu.regs.cs;
-        let ip = cpu.regs.ip;
-        let physical_addr = ((cs as u32) << 4) + (ip as u32);
-        
-        if max_cycles > 0 {
-            println!("\nCycle {}: CS:IP={:04X}:{:04X}, Physical={:05X}", 
-                     cycles, cs, ip, physical_addr);
-        } else {
-            println!("\nCS:IP={:04X}:{:04X}, Physical={:05X}", 
-                     cs, ip, physical_addr);
+        // Check for input
+        let mut buf = [0; 1];
+        if stdin.read_exact(&mut buf).is_ok() {
+            cpu.serial.add_input(buf[0]);
         }
-        
+
+        // Process any pending output
+        while let Some(byte) = cpu.serial.get_output() {
+            print!("{}", byte as char);
+            let _ = std::io::stdout().flush().unwrap();
+        }
+
         match cpu.run() {
             Ok(_) => {
-                // Log register state
-                println!("AX={:04X} BX={:04X} CX={:04X} DX={:04X}", 
-                         cpu.regs.ax, cpu.regs.bx, cpu.regs.cx, cpu.regs.dx);
-                println!("SI={:04X} DI={:04X} BP={:04X} SP={:04X}", 
-                         cpu.regs.si, cpu.regs.di, cpu.regs.bp, cpu.regs.sp);
-                println!("Flags: {:?}", cpu.regs.flags);
-                
                 if cpu.is_halted() {
-                    if max_cycles > 0 {
-                        println!("\nCPU halted normally after {} cycles", cycles);
-                    } else {
-                        println!("\nCPU halted normally");
-                    }
                     break;
                 }
             }
             Err(e) => {
-                if max_cycles > 0 {
-                    println!("\nCPU error after {} cycles: {}", cycles, e);
-                } else {
-                    println!("\nCPU error: {}", e);
-                }
+                println!("\nCPU error: {}", e);
                 break;
             }
         }
         
-        if max_cycles > 0 {
+        if max_cycles != 0 {
             cycles += 1;
-            if cycles >= max_cycles {
-                println!("\nReached maximum cycles ({}). Final state:", max_cycles);
-                println!("CS:IP = {:04X}:{:04X}", cpu.regs.cs, cpu.regs.ip);
-                println!("Physical address = {:05X}", ((cpu.regs.cs as u32) << 4) + (cpu.regs.ip as u32));
-                break;
-            }
         }
+
+        if cycles > max_cycles {
+            println!("\nReached maximum cycles ({})", max_cycles);
+            break;
+        }
+
+        // Small delay to prevent CPU from consuming too many resources
+        std::thread::sleep(Duration::from_micros(100));
     }
     
     Ok(())

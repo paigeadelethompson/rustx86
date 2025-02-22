@@ -17,7 +17,7 @@ impl BiosRom {
             0x75, 0x09,       // JNE skip_write
             // Handle serial write
             0xB2, 0x00,       // MOV DL, 0 (COM1)
-            0xE6, 0xF8,       // OUT 0xF8, AL (write to COM1)
+            0xE6, 0x3F,       // OUT 0x3F8, AL (write to COM1)
             0xB4, 0x00,       // MOV AH, 0 (success)
             0xEB, 0x03,       // JMP done
             // skip_write:
@@ -35,40 +35,41 @@ impl BiosRom {
         data[serial_offset..serial_offset + serial_handler.len()]
             .copy_from_slice(&serial_handler);
         
-        // Basic BIOS initialization code at F000:FFF0 (offset 0xFFF0)
-        let reset_vector = 0xFFF0;
-        
-        // Far JMP to F000:E05B
-        data[reset_vector] = 0xEA;     // Far JMP
-        data[reset_vector + 1] = 0x5B; // IP = E05B
-        data[reset_vector + 2] = 0xE0;
-        data[reset_vector + 3] = 0x00; // CS = F000
-        data[reset_vector + 4] = 0xF0;
-
-        // BIOS entry point at F000:E05B (offset 0xE05B)
+        // BIOS entry point at F000:E05B
         let entry_point = 0xE05B;
         
         // Basic initialization sequence
         let init_code = [
             0xFA,             // CLI - Disable interrupts
             0x31, 0xC0,      // XOR AX, AX
-            0x8E, 0xD8,      // MOV DS, AX
-            0x8E, 0xC0,      // MOV ES, AX
-            0x8E, 0xD0,      // MOV SS, AX
-            0xBC, 0x00, 0x7C, // MOV SP, 0x7C00
+            0x8E, 0xD8,      // MOV DS, AX  - Set DS = 0
+            0x8E, 0xC0,      // MOV ES, AX  - Set ES = 0
+            0x8E, 0xD0,      // MOV SS, AX  - Set SS = 0
+            0xBC, 0x00, 0x7C, // MOV SP, 0x7C00 - Set up stack just below boot sector
             0xFB,             // STI - Enable interrupts
             0xEA,             // Far JMP to 0000:7C00 (boot sector)
             0x00, 0x7C,      // IP = 7C00
             0x00, 0x00,      // CS = 0000
         ];
 
+        // Copy initialization code to ROM at the entry point offset
         data[entry_point..entry_point + init_code.len()].copy_from_slice(&init_code);
+
+        // Reset vector at F000:FFF0
+        let reset_vector = 0xFFF0;
+        data[reset_vector] = 0xEA;     // Far JMP
+        data[reset_vector + 1] = 0x5B; // IP = E05B
+        data[reset_vector + 2] = 0xE0;
+        data[reset_vector + 3] = 0x00; // CS = F000
+        data[reset_vector + 4] = 0xF0;
 
         BiosRom { data }
     }
 
     pub fn read_byte(&self, offset: usize) -> u8 {
-        self.data[offset]
+        let value = self.data[offset];
+        // println!("ROM read: offset={:#05X} value={:#04X}", offset, value);
+        value
     }
 
     pub fn as_slice(&self) -> &[u8] {
@@ -91,7 +92,7 @@ impl BiosRom {
             0x75, 0x09,       // JNE skip_write
             // Handle serial write
             0xB2, 0x00,       // MOV DL, 0 (COM1)
-            0xE6, 0xF8,       // OUT 0xF8, AL (write to COM1)
+            0xE6, 0x3F,       // OUT 0x3F8, AL (write to COM1)
             0xB4, 0x00,       // MOV AH, 0 (success)
             0xEB, 0x03,       // JMP done
             // skip_write:
@@ -109,34 +110,33 @@ impl BiosRom {
         data[serial_offset..serial_offset + serial_handler.len()]
             .copy_from_slice(&serial_handler);
         
-        // Basic BIOS initialization code at F000:FFF0 (offset 0xFFF0)
-        let reset_vector = 0xFFF0;
-        
-        // Far JMP to F000:E05B
-        data[reset_vector] = 0xEA;     // Far JMP
-        data[reset_vector + 1] = 0x5B; // IP = E05B
-        data[reset_vector + 2] = 0xE0;
-        data[reset_vector + 3] = 0x00; // CS = F000
-        data[reset_vector + 4] = 0xF0;
-
-        // BIOS entry point at F000:E05B (offset 0xE05B)
+        // BIOS entry point at F000:E05B
         let entry_point = 0xE05B;
         
         // Basic initialization sequence
         let init_code = [
             0xFA,             // CLI - Disable interrupts
             0x31, 0xC0,      // XOR AX, AX
-            0x8E, 0xD8,      // MOV DS, AX
-            0x8E, 0xC0,      // MOV ES, AX
-            0x8E, 0xD0,      // MOV SS, AX
-            0xBC, 0x00, 0x7C, // MOV SP, 0x7C00
+            0x8E, 0xD8,      // MOV DS, AX  - Set DS = 0
+            0x8E, 0xC0,      // MOV ES, AX  - Set ES = 0
+            0x8E, 0xD0,      // MOV SS, AX  - Set SS = 0
+            0xBC, 0x00, 0x7C, // MOV SP, 0x7C00 - Set up stack just below boot sector
             0xFB,             // STI - Enable interrupts
             0xEA,             // Far JMP to 0000:7C00 (boot sector)
             0x00, 0x7C,      // IP = 7C00
             0x00, 0x00,      // CS = 0000
         ];
 
+        // Copy initialization code to ROM at the entry point offset
         data[entry_point..entry_point + init_code.len()].copy_from_slice(&init_code);
+
+        // Reset vector at F000:FFF0
+        let reset_vector = 0xFFF0;
+        data[reset_vector] = 0xEA;     // Far JMP
+        data[reset_vector + 1] = 0x5B; // IP = E05B
+        data[reset_vector + 2] = 0xE0;
+        data[reset_vector + 3] = 0x00; // CS = F000
+        data[reset_vector + 4] = 0xF0;
 
         BiosRom { data }
     }

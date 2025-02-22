@@ -7,10 +7,10 @@ impl CPU {
         
         match mod_bits {
             0 => match rm {
-                0 => Ok((self.regs.bx + self.regs.si) as u32),
-                1 => Ok((self.regs.bx + self.regs.di) as u32),
-                2 => Ok((self.regs.bp + self.regs.si) as u32),
-                3 => Ok((self.regs.bp + self.regs.di) as u32),
+                0 => Ok((self.regs.bx.wrapping_add(self.regs.si)) as u32),
+                1 => Ok((self.regs.bx.wrapping_add(self.regs.di)) as u32),
+                2 => Ok((self.regs.bp.wrapping_add(self.regs.si)) as u32),
+                3 => Ok((self.regs.bp.wrapping_add(self.regs.di)) as u32),
                 4 => Ok(self.regs.si as u32),
                 5 => Ok(self.regs.di as u32),
                 6 => {
@@ -23,10 +23,10 @@ impl CPU {
             1 => {
                 let disp = self.fetch_byte()? as i8;
                 match rm {
-                    0 => Ok(((self.regs.bx + self.regs.si) as i32 + disp as i32) as u32),
-                    1 => Ok(((self.regs.bx + self.regs.di) as i32 + disp as i32) as u32),
-                    2 => Ok(((self.regs.bp + self.regs.si) as i32 + disp as i32) as u32),
-                    3 => Ok(((self.regs.bp + self.regs.di) as i32 + disp as i32) as u32),
+                    0 => Ok(((self.regs.bx.wrapping_add(self.regs.si)) as i32 + disp as i32) as u32),
+                    1 => Ok(((self.regs.bx.wrapping_add(self.regs.di)) as i32 + disp as i32) as u32),
+                    2 => Ok(((self.regs.bp.wrapping_add(self.regs.si)) as i32 + disp as i32) as u32),
+                    3 => Ok(((self.regs.bp.wrapping_add(self.regs.di)) as i32 + disp as i32) as u32),
                     4 => Ok((self.regs.si as i32 + disp as i32) as u32),
                     5 => Ok((self.regs.di as i32 + disp as i32) as u32),
                     6 => Ok((self.regs.bp as i32 + disp as i32) as u32),
@@ -37,10 +37,10 @@ impl CPU {
             2 => {
                 let disp = self.fetch_word()? as i16;
                 match rm {
-                    0 => Ok(((self.regs.bx + self.regs.si) as i32 + disp as i32) as u32),
-                    1 => Ok(((self.regs.bx + self.regs.di) as i32 + disp as i32) as u32),
-                    2 => Ok(((self.regs.bp + self.regs.si) as i32 + disp as i32) as u32),
-                    3 => Ok(((self.regs.bp + self.regs.di) as i32 + disp as i32) as u32),
+                    0 => Ok(((self.regs.bx.wrapping_add(self.regs.si)) as i32 + disp as i32) as u32),
+                    1 => Ok(((self.regs.bx.wrapping_add(self.regs.di)) as i32 + disp as i32) as u32),
+                    2 => Ok(((self.regs.bp.wrapping_add(self.regs.si)) as i32 + disp as i32) as u32),
+                    3 => Ok(((self.regs.bp.wrapping_add(self.regs.di)) as i32 + disp as i32) as u32),
                     4 => Ok((self.regs.si as i32 + disp as i32) as u32),
                     5 => Ok((self.regs.di as i32 + disp as i32) as u32),
                     6 => Ok((self.regs.bp as i32 + disp as i32) as u32),

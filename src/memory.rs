@@ -24,41 +24,44 @@ impl Memory {
     }
 
     pub fn read_byte(&self, addr: u32) -> u8 {
-        let addr = self.translate_address(addr) as usize;
+        let physical_addr = self.translate_address(addr);
+        // println!("Memory read at {:#06X} (translated from {:#06X})", physical_addr, addr);
         
-        match addr {
-            0..=0x9FFFF => {
-                // Conventional memory (0-640K)
-                self.ram[addr]
-            }
-            0xA0000..=0xEFFFF => {
-                // Upper Memory Area (UMA)
-                self.ram[addr]
-            }
-            0xF0000..=0xFFFFF => {
-                // ROM BIOS area (F000:0000 to F000:FFFF)
-                self.rom.read_byte(addr - 0xF0000)
-            }
-            _ => 0,
+        // Check for ROM access (F0000-FFFFF)
+        if physical_addr >= 0xF0000 && physical_addr <= 0xFFFFF {
+            let rom_offset = physical_addr - 0xF0000;
+            let value = self.rom.read_byte(rom_offset as usize);
+            // println!("ROM read: physical={:#06X} offset={:#05X} value={:#04X}", 
+            //          physical_addr, rom_offset, value);
+            return value;
         }
+
+        // Handle RAM access
+        let value = if physical_addr < self.ram.len() as u32 {
+            self.ram[physical_addr as usize]
+        } else {
+            // println!("Warning: Reading from unmapped memory at {:#06X}", physical_addr);
+            0xFF  // Return 0xFF for unmapped memory instead of 0
+        };
+        // println!("RAM read: addr={:#06X} value={:#04X}", physical_addr, value);
+        value
     }
 
     pub fn write_byte(&mut self, addr: u32, value: u8) {
-        let addr = self.translate_address(addr) as usize;
+        let physical_addr = self.translate_address(addr);
+        // println!("Memory write at {:#06X} value={:#04X}", physical_addr, value);
         
-        match addr {
-            0..=0x9FFFF => {
-                // Conventional memory (0-640K)
-                self.ram[addr] = value;
-            }
-            0xA0000..=0xEFFFF => {
-                // Upper Memory Area (UMA)
-                self.ram[addr] = value;
-            }
-            0xF0000..=0xFFFFF => {
-                // ROM BIOS area - writes are ignored
-            }
-            _ => {}
+        // Prevent writes to ROM
+        if physical_addr >= 0xF0000 && physical_addr <= 0xFFFFF {
+            // println!("Warning: Attempted write to ROM at {:#06X}", physical_addr);
+            return;
+        }
+
+        if physical_addr < self.ram.len() as u32 {
+            self.ram[physical_addr as usize] = value;
+            // println!("RAM write: addr={:#06X} value={:#04X}", physical_addr, value);
+        } else {
+            // println!("Warning: Writing to unmapped memory at {:#06X}", physical_addr);
         }
     }
 
@@ -74,11 +77,26 @@ impl Memory {
     }
 
     fn translate_address(&self, addr: u32) -> u32 {
-        if !self.a20_enabled {
-            // A20 line disabled - wrap addresses
-            addr & 0xFFEFFFFF
+        // For ROM access (F0000-FFFFF), return the physical address directly
+        if addr >= 0xF0000 && addr <= 0xFFFFF {
+            // println!("ROM access at {:#06X}", addr);
+            return addr;
+        }
+
+        // For other addresses, handle A20 line
+        let physical_addr = if !self.a20_enabled {
+            // A20 line disabled - mask bit 20
+            addr & 0xFFFEFFFF
         } else {
             addr
+        };
+
+        // Check if the translated address falls into ROM range
+        if physical_addr >= 0xF0000 && physical_addr <= 0xFFFFF {
+            // println!("Translated address {:#06X} falls into ROM range", physical_addr);
+            physical_addr
+        } else {
+            physical_addr
         }
     }
 
@@ -117,9 +135,8 @@ impl Memory {
         start + size as u32 <= self.ram.len() as u32
     }
 
-    pub fn load_rom(&mut self, data: &[u8]) {
-        // Create a new ROM with the provided data
-        self.rom = BiosRom::from_data(data.to_vec());
+    pub fn load_rom(&mut self, rom: BiosRom) {
+        self.rom = rom;
     }
 
     pub fn load_boot_sector(&mut self, data: &[u8]) {

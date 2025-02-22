@@ -131,6 +131,22 @@ impl Flags {
         // Auxiliary flag (set if decrementing a value with low nibble of 0)
         self.set_auxiliary((result & 0x0F) == 0x0F);
     }
+
+    pub fn update_logical_flags(&mut self, result: u16) {
+        self.set_zero(result == 0);
+        self.set_sign((result & 0x8000) != 0);
+        self.set_carry(false);
+        self.set_overflow(false);
+        // Parity is set if the number of 1 bits in the least significant byte is even
+        let lsb = result as u8;
+        let mut count = 0;
+        for i in 0..8 {
+            if (lsb & (1 << i)) != 0 {
+                count += 1;
+            }
+        }
+        self.set_parity(count % 2 == 0);
+    }
 }
 
 impl BitOr<u16> for Flags {

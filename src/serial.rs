@@ -68,6 +68,7 @@ const XON: u8 = 0x11;   // DC1
 const XOFF: u8 = 0x13;  // DC3
 
 use std::collections::VecDeque;
+use std::io::Write;
 
 pub struct SerialController {
     ports: Vec<Option<SerialPort>>,
@@ -286,21 +287,36 @@ pub struct FlowControl {
 }
 
 pub struct Serial {
-    data: u8,
+    input_buffer: VecDeque<u8>,
+    output_buffer: VecDeque<u8>,
 }
 
 impl Serial {
     pub fn new() -> Self {
         Serial {
-            data: 0,
+            input_buffer: VecDeque::new(),
+            output_buffer: VecDeque::new(),
         }
     }
 
     pub fn read_byte(&mut self) -> u8 {
-        self.data
+        self.input_buffer.pop_front().unwrap_or(0)
     }
 
     pub fn write_byte(&mut self, value: u8) {
-        self.data = value;
+        print!("{}", value as char);
+        let _ = std::io::stdout().flush();
+    }
+
+    pub fn has_data(&self) -> bool {
+        !self.input_buffer.is_empty()
+    }
+
+    pub fn add_input(&mut self, byte: u8) {
+        self.input_buffer.push_back(byte);
+    }
+
+    pub fn get_output(&mut self) -> Option<u8> {
+        self.output_buffer.pop_front()
     }
 } 

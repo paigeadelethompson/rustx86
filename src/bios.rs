@@ -11,6 +11,9 @@ const SERIAL_PORT: u16 = 0x3F8; // COM1 port
 pub fn init_bios_interrupts(cpu: &mut CPU) {
     // Initialize interrupt vector table at 0x0000
     
+    // INT 10h - Video Services
+    set_interrupt_vector(cpu, 0x10, bios_seg(), video_services_offset());
+    
     // INT 14h - Serial Services (Primary TTY output)
     set_interrupt_vector(cpu, 0x14, bios_seg(), serial_services_offset());
     
@@ -48,7 +51,8 @@ fn disk_services_offset() -> u16 {
 }
 
 pub fn handle_bios_interrupt(cpu: &mut CPU, int_num: u8) -> Result<(), String> {
-    match int_num {
+    println!("[BIOS::handle_bios_interrupt] Handling INT {:02X}h, AH={:02X}h", int_num, cpu.regs.get_ah());
+    let result = match int_num {
         0x10 => handle_video_interrupt(cpu),
         0x14 => handle_serial_interrupt(cpu),
         0x13 => handle_disk_interrupt(cpu),
@@ -58,16 +62,20 @@ pub fn handle_bios_interrupt(cpu: &mut CPU, int_num: u8) -> Result<(), String> {
         0x15 => { cpu.int15_system_services()?; Ok(()) },   // System Services
         0x1A => { cpu.int1a_time_services()?; Ok(()) },     // Time Services
         _ => Err(format!("Unhandled BIOS interrupt: {:02X}", int_num)),
-    }
+    };
+    println!("[BIOS::handle_bios_interrupt] Completed INT {:02X}h", int_num);
+    result
 }
 
 fn handle_video_interrupt(cpu: &mut CPU) -> Result<(), String> {
+    println!("[BIOS::handle_video_interrupt] Function AH={:02X}h", cpu.regs.get_ah());
     match cpu.regs.get_ah() {
         0x0E => {
             // Redirect TTY output to serial port
             let char = cpu.regs.get_al();
             print!("{}", char as char);
             std::io::stdout().flush().unwrap();
+            println!("[BIOS::handle_video_interrupt] TTY output: '{}'", char as char);
             Ok(())
         }
         _ => Ok(()),
@@ -78,31 +86,56 @@ fn handle_serial_interrupt(cpu: &mut CPU) -> Result<(), String> {
     match cpu.regs.get_ah() {
         0x00 => {
             // Initialize port
-            println!("Serial INT 14h: Initialize port");
-            // For now, just return success
-            cpu.regs.set_ah(0);
+            let port = cpu.regs.get_dx() as u32;  // Convert to u32
+            let divisor = 0x0C;  // 9600 baud
+            
+            // Set DLAB
+            cpu.memory.write_byte(port + 3, 0x80);
+            // Set divisor
+            cpu.memory.write_byte(port, divisor as u8);
+            cpu.memory.write_byte(port + 1, (divisor >> 8) as u8);
+            // 8N1, clear DLAB
+            cpu.memory.write_byte(port + 3, 0x03);
+            // Enable FIFO, clear them, with 14-byte threshold
+            cpu.memory.write_byte(port + 2, 0xC7);
+            // IRQs enabled, RTS/DSR set
+            cpu.memory.write_byte(port + 4, 0x0B);
+            
+            cpu.regs.set_ah(0);  // Success
             Ok(())
         }
         0x01 => {
             // Send character
-            let char = cpu.regs.get_al();
-            println!("Serial INT 14h: Send character '{}' (0x{:02X})", char as char, char);
-            print!("{}", char as char);
-            std::io::stdout().flush().unwrap();
+            let char = cpu.regs.get_al() & 0xFF;  // Only use low byte
+            cpu.serial.write_byte(char);
+            cpu.regs.set_ah(0);  // Success
+            Ok(())
+        }
+        0x02 => {
+            // Read character
+            let char = cpu.serial.read_byte();
+            cpu.regs.set_al(char);
             cpu.regs.set_ah(0); // Success
             Ok(())
         }
-        _ => {
-            println!("Serial INT 14h: Unhandled function AH={:02X}", cpu.regs.get_ah());
+        0x03 => {
+            // Get port status
+            let status = if cpu.serial.has_data() { 0x01 } else { 0x00 };
+            cpu.regs.set_ah(status);
             Ok(())
+        }
+        _ => {
+            Err(format!("Unhandled serial interrupt function: {:#04X}", cpu.regs.get_ah()))
         }
     }
 }
 
 fn handle_keyboard_interrupt(cpu: &mut CPU) -> Result<(), String> {
+    println!("[BIOS::handle_keyboard_interrupt] Function AH={:02X}h", cpu.regs.get_ah());
     match cpu.regs.get_ah() {
         0x00 => {
             // Read character
+            println!("[BIOS::handle_keyboard_interrupt] Reading character (returning null)");
             cpu.regs.set_al(0); // Return null for now
             Ok(())
         }
@@ -111,13 +144,16 @@ fn handle_keyboard_interrupt(cpu: &mut CPU) -> Result<(), String> {
 }
 
 fn handle_disk_interrupt(cpu: &mut CPU) -> Result<(), String> {
+    println!("[BIOS::handle_disk_interrupt] Function AH={:02X}h", cpu.regs.get_ah());
     match cpu.regs.get_ah() {
         0x00 => {
             // Reset disk system
+            println!("[BIOS::handle_disk_interrupt] Resetting disk system");
             cpu.regs.set_ah(0); // Success
             Ok(())
         }
         _ => {
+            println!("[BIOS::handle_disk_interrupt] Unhandled function, returning error");
             cpu.regs.set_ah(1); // Error
             Ok(())
         }
@@ -231,9 +267,9 @@ pub fn init_bios_data_area(cpu: &mut CPU) {
     cpu.memory.write_word(0x0406, 0x2E8); // COM4
 }
 
-fn print_debug(cpu: &mut CPU, msg: &str) {
+pub fn print_debug(cpu: &mut CPU, msg: &str) {
     // Print debug messages to stdout instead of serial port
-    println!("{}", msg);
+    println!("[print_debug] {}", msg);
 }
 
 // Add error code constants
