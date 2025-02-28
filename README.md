@@ -263,12 +263,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Intel 8086 documentation
-- FAT16 filesystem specification
-- BIOS interrupt specifications
-- Ralph Brown's Interrupt List
-- Bochs x86 emulator project
-- QEMU project
