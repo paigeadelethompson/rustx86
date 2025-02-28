@@ -7,7 +7,8 @@ use std::io;
 use std::path::Path;
 
 // Define sector start constants
-const FAT1_START: u32 = 63; // First FAT starts after boot sector
+const BOOT_SECTOR: u32 = 63; // Boot sector is at sector 63
+const FAT1_START: u32 = 64; // First FAT starts after boot sector
 const FAT2_START: u32 = FAT1_START + FAT16_SECTORS_PER_FAT as u32;
 const ROOT_DIR_START: u32 = FAT2_START + FAT16_SECTORS_PER_FAT as u32;
 const DATA_START: u32 =
@@ -177,47 +178,73 @@ impl DiskImage {
 
     pub fn read_sector(&self, lba: u32) -> Option<Vec<u8>> {
         let mut sector = vec![0; SECTOR_SIZE];
+        println!("Reading sector {}", lba);
+        println!("FAT table first bytes: {:?}", &self.fat_table[..4]);
+
+        // For sectors beyond disk size, return a zeroed sector
+        if lba >= FAT16_TOTAL_SECTORS as u32 {
+            return Some(sector);
+        }
 
         match lba {
-            0 => sector.copy_from_slice(&self.mbr.to_bytes()),
-            63 => sector.copy_from_slice(&self.boot_sector),
+            0 => {
+                println!("Reading MBR");
+                sector.copy_from_slice(&self.mbr.to_bytes());
+            }
             _ => {
                 let region = self.sector_to_region(lba);
+                println!("Region for sector {}: {:?}", lba, region);
                 match region {
                     DiskRegion::BootSector => {
-                        sector.copy_from_slice(&self.mbr.to_bytes());
+                        println!("Reading boot sector region");
+                        sector.copy_from_slice(&self.boot_sector);
                     }
                     DiskRegion::FAT1 => {
                         let offset = (lba - FAT1_START) as usize * SECTOR_SIZE;
-                        sector.copy_from_slice(&self.fat_table[offset..offset + SECTOR_SIZE]);
+                        if offset + SECTOR_SIZE <= self.fat_table.len() {
+                            println!("Reading FAT1 at offset {}", offset);
+                            sector.copy_from_slice(&self.fat_table[offset..offset + SECTOR_SIZE]);
+                        }
                     }
                     DiskRegion::FAT2 => {
                         let offset = (lba - FAT2_START) as usize * SECTOR_SIZE;
-                        sector.copy_from_slice(&self.fat_table[offset..offset + SECTOR_SIZE]);
+                        if offset + SECTOR_SIZE <= self.fat_table.len() {
+                            println!("Reading FAT2 at offset {}", offset);
+                            sector.copy_from_slice(&self.fat_table[offset..offset + SECTOR_SIZE]);
+                        }
                     }
                     DiskRegion::RootDirectory => {
                         let offset = (lba - ROOT_DIR_START) as usize * SECTOR_SIZE;
-                        sector.copy_from_slice(&self.root_directory[offset..offset + SECTOR_SIZE]);
+                        if offset + SECTOR_SIZE <= self.root_directory.len() {
+                            println!("Reading root directory at offset {}", offset);
+                            sector.copy_from_slice(&self.root_directory[offset..offset + SECTOR_SIZE]);
+                        }
                     }
                     DiskRegion::Data => {
                         let offset = (lba - DATA_START) as usize * SECTOR_SIZE;
-                        sector.copy_from_slice(&self.data_sectors[offset..offset + SECTOR_SIZE]);
+                        if offset + SECTOR_SIZE <= self.data_sectors.len() {
+                            println!("Reading data at offset {}", offset);
+                            sector.copy_from_slice(&self.data_sectors[offset..offset + SECTOR_SIZE]);
+                        }
                     }
                 }
             }
         }
 
+        println!("First bytes of sector: {:?}", &sector[..4]);
         Some(sector)
     }
 
     fn sector_to_region(&self, sector: u32) -> DiskRegion {
         if sector == 0 {
             DiskRegion::BootSector
-        } else if (FAT1_START..FAT2_START).contains(&sector) {
+        } else if sector == BOOT_SECTOR {
+            DiskRegion::BootSector
+        } else if sector >= FAT1_START && sector < FAT2_START {
             DiskRegion::FAT1
-        } else if (FAT2_START..ROOT_DIR_START).contains(&sector) {
+        } else if sector >= FAT2_START && sector < ROOT_DIR_START {
             DiskRegion::FAT2
-        } else if (ROOT_DIR_START..DATA_START).contains(&sector) {
+        } else if sector >= ROOT_DIR_START && sector < DATA_START {
             DiskRegion::RootDirectory
         } else {
             DiskRegion::Data
@@ -365,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_disk_image_new() {
-        let path = PathBuf::from("test_drive.img");
+        let path = PathBuf::from("drive_c/");
         let disk_image = DiskImage::new(&path).unwrap();
 
         // Test basic structure initialization
@@ -385,9 +412,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_disk_image_read_sector() {
-        let path = PathBuf::from("test_drive.img");
+        let path = PathBuf::from("drive_c/");
         let disk_image = DiskImage::new(&path).unwrap();
 
         // Test reading MBR (sector 0)
@@ -412,7 +438,7 @@ mod tests {
 
     #[test]
     fn test_disk_region_detection() {
-        let path = PathBuf::from("test_drive.img");
+        let path = PathBuf::from("drive_c/");
         let disk_image = DiskImage::new(&path).unwrap();
 
         // Test region detection
@@ -448,7 +474,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_bios_parameter_block_to_bytes() {
         let bpb = BiosParameterBlock::new(
             FAT16_SECTORS_PER_CLUSTER,

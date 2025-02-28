@@ -94,6 +94,15 @@ impl Mbr {
             mbr.boot_code[..default_boot_code.len()].copy_from_slice(&default_boot_code);
         }
 
+        // Calculate geometry-based values
+        let sectors_per_cylinder = SECTORS_PER_TRACK * HEADS_PER_CYLINDER;
+        let total_cylinders = (FAT16_TOTAL_SECTORS + sectors_per_cylinder as u32 - 1) / sectors_per_cylinder as u32;
+        let end_cylinder = if total_cylinders > 1024 {
+            1023 // Maximum cylinder value in CHS addressing
+        } else {
+            (total_cylinders - 1) as u16
+        };
+
         // Create bootable FAT16 partition
         let partition = PartitionEntry {
             bootable: true,
@@ -103,8 +112,7 @@ impl Mbr {
             system_id: FAT16_SYSTEM_ID,
             end_head: (HEADS_PER_CYLINDER - 1) as u8,
             end_sector: SECTORS_PER_TRACK as u8,
-            end_cylinder: ((FAT16_TOTAL_SECTORS / (SECTORS_PER_TRACK * HEADS_PER_CYLINDER) as u32)
-                - 1) as u16,
+            end_cylinder,
             start_lba: 63,
             total_sectors: FAT16_TOTAL_SECTORS,
         };
@@ -268,15 +276,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_mbr_roundtrip() {
         let boot_code = vec![0xEB, 0x3C, 0x90];
-        let original = Mbr::create_bootable_fat16_mbr(boot_code).unwrap();
+        let original = Mbr::create_bootable_fat16_mbr(boot_code.clone()).unwrap();
         let bytes = original.to_bytes();
         let parsed = Mbr::from_bytes(&bytes).unwrap();
 
-        // Test all fields match after roundtrip
-        assert_eq!(parsed.boot_code, original.boot_code);
+        // Test boot code matches (first 3 bytes should match our input)
+        assert_eq!(&parsed.boot_code[..boot_code.len()], &boot_code);
+        // Rest should be zeros
+        assert!(parsed.boot_code[boot_code.len()..].iter().all(|&x| x == 0));
         assert_eq!(parsed.signature, original.signature);
 
         for (orig, parsed) in original.partitions.iter().zip(parsed.partitions.iter()) {

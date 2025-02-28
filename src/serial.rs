@@ -160,7 +160,7 @@ impl SerialController {
     pub fn write_byte(&mut self, port: u16, value: u8) {
         let port_idx = (port & 0x07) as usize;
         if let Some(Some(p)) = self.ports.get_mut(port_idx) {
-            p.write_byte(value);
+            p.receive_byte(value);
         }
     }
 
@@ -268,14 +268,7 @@ impl SerialPort {
 
     #[allow(dead_code)]
     pub fn get_status(&self) -> u8 {
-        let mut status = 0;
-        if self.initialized {
-            status |= 0x60; // Transmitter ready and holding register empty
-            if !self.rx_fifo.is_empty() {
-                status |= 0x01; // Data ready
-            }
-        }
-        status
+        self.lsr
     }
 
     #[allow(dead_code)]
@@ -394,7 +387,7 @@ impl Serial {
     pub fn write_byte(&mut self, port: u16, value: u8) {
         let port_idx = (port & 0x07) as usize;
         if let Some(Some(p)) = self.ports.get_mut(port_idx) {
-            p.write_byte(value);
+            p.receive_byte(value);
         }
     }
 
@@ -463,7 +456,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_serial_port_status() {
         let mut port = SerialPort::new();
 
@@ -487,7 +479,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_serial_controller_port_access() {
         let mut controller = SerialController::new();
 
