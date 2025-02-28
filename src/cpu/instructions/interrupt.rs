@@ -39,19 +39,28 @@ impl Cpu {
         let new_ip = self.pop_word()?;
         let new_cs = self.pop_word()?;
         let flags = self.pop_word()?;
-        
-        println!("IRET: Popped IP=0x{:04X}, CS=0x{:04X}, FLAGS=0x{:04X}", new_ip, new_cs, flags);
-        
+
+        println!(
+            "IRET: Popped IP=0x{:04X}, CS=0x{:04X}, FLAGS=0x{:04X}",
+            new_ip, new_cs, flags
+        );
+
         // Set flags, ensuring reserved bits 1 and 3 are set
         let flags_with_reserved = flags | 0x000A; // Set bits 1 and 3
-        println!("IRET: Setting flags with reserved bits: 0x{:04X}", flags_with_reserved);
-        
+        println!(
+            "IRET: Setting flags with reserved bits: 0x{:04X}",
+            flags_with_reserved
+        );
+
         self.regs.ip = new_ip;
         self.regs.cs = new_cs;
         self.regs.flags.set_from_word(flags_with_reserved);
-        
-        println!("IRET: Final flags value: 0x{:04X}", self.regs.flags.as_word());
-        
+
+        println!(
+            "IRET: Final flags value: 0x{:04X}",
+            self.regs.flags.as_word()
+        );
+
         Ok(())
     }
 }

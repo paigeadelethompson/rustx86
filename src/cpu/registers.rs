@@ -185,28 +185,28 @@ impl Registers {
 
     pub fn get_reg8(&self, reg: u8) -> u8 {
         match reg & 0x07 {
-            0 => self.ax as u8,         // AL
-            1 => self.cx as u8,         // CL
-            2 => self.dx as u8,         // DL
-            3 => self.bx as u8,         // BL
-            4 => (self.ax >> 8) as u8,  // AH
-            5 => (self.cx >> 8) as u8,  // CH
-            6 => (self.dx >> 8) as u8,  // DH
-            7 => (self.bx >> 8) as u8,  // BH
+            0 => self.ax as u8,        // AL
+            1 => self.cx as u8,        // CL
+            2 => self.dx as u8,        // DL
+            3 => self.bx as u8,        // BL
+            4 => (self.ax >> 8) as u8, // AH
+            5 => (self.cx >> 8) as u8, // CH
+            6 => (self.dx >> 8) as u8, // DH
+            7 => (self.bx >> 8) as u8, // BH
             _ => unreachable!(),
         }
     }
 
     pub fn set_reg8(&mut self, reg: u8, value: u8) -> Result<(), String> {
         match reg & 0x07 {
-            0 => self.ax = (self.ax & 0xFF00) | (value as u16),         // AL
-            1 => self.cx = (self.cx & 0xFF00) | (value as u16),         // CL
-            2 => self.dx = (self.dx & 0xFF00) | (value as u16),         // DL
-            3 => self.bx = (self.bx & 0xFF00) | (value as u16),         // BL
-            4 => self.ax = (self.ax & 0x00FF) | ((value as u16) << 8),  // AH
-            5 => self.cx = (self.cx & 0x00FF) | ((value as u16) << 8),  // CH
-            6 => self.dx = (self.dx & 0x00FF) | ((value as u16) << 8),  // DH
-            7 => self.bx = (self.bx & 0x00FF) | ((value as u16) << 8),  // BH
+            0 => self.ax = (self.ax & 0xFF00) | (value as u16), // AL
+            1 => self.cx = (self.cx & 0xFF00) | (value as u16), // CL
+            2 => self.dx = (self.dx & 0xFF00) | (value as u16), // DL
+            3 => self.bx = (self.bx & 0xFF00) | (value as u16), // BL
+            4 => self.ax = (self.ax & 0x00FF) | ((value as u16) << 8), // AH
+            5 => self.cx = (self.cx & 0x00FF) | ((value as u16) << 8), // CH
+            6 => self.dx = (self.dx & 0x00FF) | ((value as u16) << 8), // DH
+            7 => self.bx = (self.bx & 0x00FF) | ((value as u16) << 8), // BH
             _ => return Err("Invalid register index".to_string()),
         }
         Ok(())

@@ -74,8 +74,11 @@ impl Cpu {
         let frame_size = self.fetch_word()?;
         println!("ENTER: Frame size = {:#06x}", frame_size);
         println!("ENTER: Nesting level = {}", nesting_level);
-        println!("ENTER: Initial BP = {:#06x}, SP = {:#06x}", self.regs.bp, self.regs.sp);
-        
+        println!(
+            "ENTER: Initial BP = {:#06x}, SP = {:#06x}",
+            self.regs.bp, self.regs.sp
+        );
+
         let bp = self.regs.bp;
         self.push_word(bp)?;
         let frame_ptr = self.regs.sp;
@@ -92,7 +95,10 @@ impl Cpu {
 
         self.regs.bp = frame_ptr;
         self.regs.sp = self.regs.sp.wrapping_sub(frame_size);
-        println!("ENTER: Final BP = {:#06x}, SP = {:#06x}", self.regs.bp, self.regs.sp);
+        println!(
+            "ENTER: Final BP = {:#06x}, SP = {:#06x}",
+            self.regs.bp, self.regs.sp
+        );
         Ok(())
     }
 
@@ -100,17 +106,20 @@ impl Cpu {
         let imm16 = self.fetch_word()?;
         println!("RET FAR: Immediate value = {:#06x}", imm16);
         println!("RET FAR: Initial SP = {:#06x}", self.regs.sp);
-        
+
         // First pop IP, then CS (x86 stack order)
         let ip = self.pop_word()?;
         let cs = self.pop_word()?;
         println!("RET FAR: Popped IP = {:#06x}, CS = {:#06x}", ip, cs);
-        
+
         // Set CS:IP first, then adjust SP
         self.regs.ip = ip;
         self.regs.cs = cs;
         self.regs.sp += imm16;
-        println!("RET FAR: Final SP = {:#06x} (after adding imm16)", self.regs.sp);
+        println!(
+            "RET FAR: Final SP = {:#06x} (after adding imm16)",
+            self.regs.sp
+        );
         Ok(())
     }
 }
@@ -262,8 +271,8 @@ mod tests {
     #[test]
     fn test_enter() {
         let mut cpu = setup_cpu();
-        cpu.regs.cs = 0;  // Set code segment to 0
-        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
+        cpu.regs.cs = 0; // Set code segment to 0
+        cpu.regs.ip = 0x100; // Set instruction pointer to 0x100
         cpu.regs.bp = 0x2000;
         cpu.regs.sp = 0x2000;
         cpu.memory.write_word(0x100, 0x0010); // Frame size
@@ -272,7 +281,7 @@ mod tests {
         assert_eq!(cpu.regs.bp, 0x1FFE); // New frame pointer
         assert_eq!(cpu.regs.sp, 0x1FEE); // SP = BP - frame_size
         assert_eq!(cpu.regs.ip, 0x102); // IP should be advanced by 2 bytes (frame size)
-        
+
         // Verify the old BP was pushed onto the stack
         assert_eq!(
             cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE),
@@ -283,20 +292,22 @@ mod tests {
     #[test]
     fn test_ret_far_imm16() {
         let mut cpu = setup_cpu();
-        cpu.regs.cs = 0;  // Set code segment to 0
-        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
+        cpu.regs.cs = 0; // Set code segment to 0
+        cpu.regs.ip = 0x100; // Set instruction pointer to 0x100
         cpu.regs.sp = 0x1FFC;
-        
+
         // Write return CS:IP and immediate value
         // Note: Stack grows down, so CS is at lower address
         // When we pop, we'll get IP first (from higher address), then CS (from lower address)
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFC, 0x0100); // IP at lower address
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x1000); // CS at higher address
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFC, 0x0100); // IP at lower address
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x1000); // CS at higher address
         cpu.memory.write_word(0x100, 0x0004); // Immediate value at current IP
-        
+
         assert!(cpu.ret_far_imm16().is_ok());
-        assert_eq!(cpu.regs.cs, 0x1000);  // Should return to CS=0x1000
-        assert_eq!(cpu.regs.ip, 0x0100);  // Should return to IP=0x0100
-        assert_eq!(cpu.regs.sp, 0x2004);  // SP = original + 4 (popped CS:IP) + imm16
+        assert_eq!(cpu.regs.cs, 0x1000); // Should return to CS=0x1000
+        assert_eq!(cpu.regs.ip, 0x0100); // Should return to IP=0x0100
+        assert_eq!(cpu.regs.sp, 0x2004); // SP = original + 4 (popped CS:IP) + imm16
     }
 }

@@ -61,7 +61,10 @@ impl Cpu {
     pub(crate) fn popf(&mut self) -> Result<(), String> {
         let flags = self.pop_word()?;
         println!("POPF: Popped flags value: 0x{:04X}", flags);
-        println!("POPF: Previous flags value: 0x{:04X}", self.regs.flags.as_u16());
+        println!(
+            "POPF: Previous flags value: 0x{:04X}",
+            self.regs.flags.as_u16()
+        );
         self.regs.flags.set_from_u16(flags);
         println!("POPF: New flags value: 0x{:04X}", self.regs.flags.as_u16());
         Ok(())
@@ -181,24 +184,32 @@ mod tests {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFE;
         let flags_value = 0x0202; // Example flags value
-        println!("Test: Writing flags 0x{:04X} to memory at SS:SP ({}:{})", 
-                flags_value, cpu.regs.ss, cpu.regs.sp);
+        println!(
+            "Test: Writing flags 0x{:04X} to memory at SS:SP ({}:{})",
+            flags_value, cpu.regs.ss, cpu.regs.sp
+        );
         cpu.memory
             .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, flags_value);
-        
+
         // Verify the write worked
         let read_back = cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE);
         println!("Test: Read back value from memory: 0x{:04X}", read_back);
-        
+
         assert!(cpu.popf().is_ok());
-        
+
         // The actual flags value will include the reserved bits (1 and 3) set to 1
         let expected_flags = flags_value | 0x000A; // Add reserved bits
-        assert_eq!(cpu.regs.flags.as_u16(), expected_flags, 
-                  "Flags not set correctly. Expected 0x{:04X}, got 0x{:04X}", 
-                  expected_flags, cpu.regs.flags.as_u16());
-        assert_eq!(cpu.regs.sp, 0x2000, 
-                  "Stack pointer not incremented correctly. Expected 0x2000, got 0x{:04X}", 
-                  cpu.regs.sp);
+        assert_eq!(
+            cpu.regs.flags.as_u16(),
+            expected_flags,
+            "Flags not set correctly. Expected 0x{:04X}, got 0x{:04X}",
+            expected_flags,
+            cpu.regs.flags.as_u16()
+        );
+        assert_eq!(
+            cpu.regs.sp, 0x2000,
+            "Stack pointer not incremented correctly. Expected 0x2000, got 0x{:04X}",
+            cpu.regs.sp
+        );
     }
 }

@@ -58,7 +58,10 @@ impl Cpu {
         println!("ADC: dest={:02X}, src={:02X}, carry={}", dest, src, carry);
         let (result, carry1) = dest.overflowing_add(src);
         let (result, carry2) = result.overflowing_add(carry);
-        println!("ADC: result={:02X}, carry1={}, carry2={}", result, carry1, carry2);
+        println!(
+            "ADC: result={:02X}, carry1={}, carry2={}",
+            result, carry1, carry2
+        );
         self.write_rm8(modrm, result)?;
         self.regs.flags.set_carry(carry1 || carry2);
         self.regs.flags.set_zero(result == 0);
@@ -145,9 +148,7 @@ impl Cpu {
         self.regs.flags.set_sign((result & 0x8000) != 0);
         let result_i16 = result as i16;
         let overflow = !(-0x8000..=0x7FFF).contains(&result_i16);
-        self.regs
-            .flags
-            .set_overflow(overflow);
+        self.regs.flags.set_overflow(overflow);
         self.regs
             .flags
             .set_parity((result as u8).count_ones() % 2 == 0);
@@ -513,7 +514,7 @@ mod tests {
 
         // Test negative numbers
         cpu.regs.set_ax(0xFFFE); // -2 in two's complement
-        // Reset IP to start of instruction
+                                 // Reset IP to start of instruction
         cpu.regs.ip = 0x100;
         cpu.memory.write_byte(0x100, 0xC0);
         cpu.memory.write_word(0x101, 3);

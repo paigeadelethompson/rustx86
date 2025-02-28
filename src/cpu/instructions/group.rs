@@ -154,9 +154,7 @@ impl Cpu {
                 let al = self.regs.get_reg8(0) as i8;
                 let result = (al as i16) * (rm_val as i16);
                 self.regs.ax = result as u16;
-                self.regs
-                    .flags
-                    .set_carry(!(-0x80..=0x7F).contains(&result));
+                self.regs.flags.set_carry(!(-0x80..=0x7F).contains(&result));
                 self.regs
                     .flags
                     .set_overflow(!(-0x80..=0x7F).contains(&result));
@@ -388,8 +386,8 @@ mod tests {
     #[test]
     fn test_execute_group1_rm8_imm8_add() {
         let mut cpu = setup_cpu();
-        cpu.regs.cs = 0;  // Set code segment to 0
-        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
+        cpu.regs.cs = 0; // Set code segment to 0
+        cpu.regs.ip = 0x100; // Set instruction pointer to 0x100
         cpu.regs.ax = 0x0505; // AL = 5
         cpu.memory.write_byte(0x100, 0xC0); // ModR/M byte for register-to-register, reg=0 (ADD)
         cpu.memory.write_byte(0x101, 0x03); // Immediate value 3
@@ -414,8 +412,8 @@ mod tests {
     #[test]
     fn test_handle_fe_group_inc() {
         let mut cpu = setup_cpu();
-        cpu.regs.cs = 0;  // Set code segment to 0
-        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
+        cpu.regs.cs = 0; // Set code segment to 0
+        cpu.regs.ip = 0x100; // Set instruction pointer to 0x100
         cpu.regs.ax = 0x0041; // AL = 0x41
         cpu.memory.write_byte(0x100, 0xC0); // ModR/M byte for register-to-register, reg=0 (INC)
         assert!(cpu.handle_fe_group().is_ok());
@@ -427,8 +425,8 @@ mod tests {
     #[test]
     fn test_handle_fe_group_dec() {
         let mut cpu = setup_cpu();
-        cpu.regs.cs = 0;  // Set code segment to 0
-        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
+        cpu.regs.cs = 0; // Set code segment to 0
+        cpu.regs.ip = 0x100; // Set instruction pointer to 0x100
         cpu.regs.ax = 0x0042; // AL = 0x42
         cpu.memory.write_byte(0x100, 0xC8); // ModR/M byte for register-to-register, reg=1 (DEC)
         assert!(cpu.handle_fe_group().is_ok());

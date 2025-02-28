@@ -154,7 +154,10 @@ impl Cpu {
         println!("LES: rm_addr = 0x{:04X}", rm_addr);
         let offset = self.read_word(rm_addr)?;
         let segment = self.read_word(rm_addr.wrapping_add(2))?;
-        println!("LES: offset = 0x{:04X}, segment = 0x{:04X}", offset, segment);
+        println!(
+            "LES: offset = 0x{:04X}, segment = 0x{:04X}",
+            offset, segment
+        );
         let reg = (modrm >> 3) & 0x07;
         self.regs.set_reg16(reg, offset)?;
         self.regs.es = segment;

@@ -135,7 +135,10 @@ impl Cpu {
                 _ => self.regs.ds,         // Other cases use DS
             };
             let physical_addr = self.get_physical_address(segment, addr as u16);
-            println!("get_rm8: Memory mode, addr={:#x}, physical_addr={:#x}", addr, physical_addr);
+            println!(
+                "get_rm8: Memory mode, addr={:#x}, physical_addr={:#x}",
+                addr, physical_addr
+            );
             Ok(self.memory.read_byte(physical_addr))
         }
     }
@@ -157,7 +160,10 @@ impl Cpu {
                 _ => self.regs.ds,         // Other cases use DS
             };
             let physical_addr = self.get_physical_address(segment, addr as u16);
-            println!("write_rm8: Memory mode, addr={:#x}, physical_addr={:#x}, value={:#x}", addr, physical_addr, value);
+            println!(
+                "write_rm8: Memory mode, addr={:#x}, physical_addr={:#x}, value={:#x}",
+                addr, physical_addr, value
+            );
             self.memory.write_byte(physical_addr, value);
         }
         Ok(())

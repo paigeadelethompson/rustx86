@@ -217,14 +217,17 @@ impl DiskImage {
                         let offset = (lba - ROOT_DIR_START) as usize * SECTOR_SIZE;
                         if offset + SECTOR_SIZE <= self.root_directory.len() {
                             println!("Reading root directory at offset {}", offset);
-                            sector.copy_from_slice(&self.root_directory[offset..offset + SECTOR_SIZE]);
+                            sector.copy_from_slice(
+                                &self.root_directory[offset..offset + SECTOR_SIZE],
+                            );
                         }
                     }
                     DiskRegion::Data => {
                         let offset = (lba - DATA_START) as usize * SECTOR_SIZE;
                         if offset + SECTOR_SIZE <= self.data_sectors.len() {
                             println!("Reading data at offset {}", offset);
-                            sector.copy_from_slice(&self.data_sectors[offset..offset + SECTOR_SIZE]);
+                            sector
+                                .copy_from_slice(&self.data_sectors[offset..offset + SECTOR_SIZE]);
                         }
                     }
                 }
