@@ -29,11 +29,11 @@ impl Registers {
             bp: 0,
             si: 0,
             di: 0,
-            cs: 0xF000,  // BIOS segment
+            cs: 0xF000, // BIOS segment
             ds: 0,
             es: 0,
             ss: 0,
-            ip: 0xFFF0,  // BIOS entry point
+            ip: 0xFFF0, // BIOS entry point
             flags: Flags::new(),
         }
     }
@@ -47,11 +47,11 @@ impl Registers {
         self.bp = 0;
         self.si = 0;
         self.di = 0;
-        self.cs = 0xF000;  // BIOS segment
+        self.cs = 0xF000; // BIOS segment
         self.ds = 0;
         self.es = 0;
         self.ss = 0;
-        self.ip = 0xFFF0;  // BIOS entry point
+        self.ip = 0xFFF0; // BIOS entry point
         self.flags = Flags::new();
     }
 
@@ -63,10 +63,12 @@ impl Registers {
         (self.ax & 0xFF) as u8
     }
 
+    #[allow(dead_code)]
     pub fn get_bh(&self) -> u8 {
         (self.bx >> 8) as u8
     }
 
+    #[allow(dead_code)]
     pub fn get_bl(&self) -> u8 {
         (self.bx & 0xFF) as u8
     }
@@ -95,10 +97,12 @@ impl Registers {
         self.ax = (self.ax & 0xFF00) | (value as u16);
     }
 
+    #[allow(dead_code)]
     pub fn set_bh(&mut self, value: u8) {
         self.bx = (self.bx & 0x00FF) | ((value as u16) << 8);
     }
 
+    #[allow(dead_code)]
     pub fn set_bl(&mut self, value: u8) {
         self.bx = (self.bx & 0xFF00) | (value as u16);
     }
@@ -127,6 +131,7 @@ impl Registers {
         self.bx
     }
 
+    #[allow(dead_code)]
     pub fn get_cx(&self) -> u16 {
         self.cx
     }
@@ -139,6 +144,7 @@ impl Registers {
         self.ax = value;
     }
 
+    #[allow(dead_code)]
     pub fn set_bx(&mut self, value: u16) {
         self.bx = value;
     }
@@ -151,18 +157,22 @@ impl Registers {
         self.dx = value;
     }
 
+    #[allow(dead_code)]
     pub fn set_sp(&mut self, value: u16) {
         self.sp = value;
     }
 
+    #[allow(dead_code)]
     pub fn set_bp(&mut self, value: u16) {
         self.bp = value;
     }
 
+    #[allow(dead_code)]
     pub fn set_si(&mut self, value: u16) {
         self.si = value;
     }
 
+    #[allow(dead_code)]
     pub fn set_di(&mut self, value: u16) {
         self.di = value;
     }
@@ -196,20 +206,24 @@ impl Registers {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn get_reg8_low(&self, reg: u8) -> u8 {
-        self.get_reg8(reg & 0x3)  // Bottom 2 bits select AL, CL, DL, BL
+        self.get_reg8(reg & 0x3) // Bottom 2 bits select AL, CL, DL, BL
     }
 
+    #[allow(dead_code)]
     pub fn set_reg8_low(&mut self, reg: u8, value: u8) -> Result<(), String> {
-        self.set_reg8(reg & 0x3, value)  // Bottom 2 bits select AL, CL, DL, BL
+        self.set_reg8(reg & 0x3, value) // Bottom 2 bits select AL, CL, DL, BL
     }
 
+    #[allow(dead_code)]
     pub fn get_reg8_high(&self, reg: u8) -> u8 {
-        self.get_reg8((reg & 0x3) | 0x4)  // Bottom 2 bits select AH, CH, DH, BH
+        self.get_reg8((reg & 0x3) | 0x4) // Bottom 2 bits select AH, CH, DH, BH
     }
 
+    #[allow(dead_code)]
     pub fn set_reg8_high(&mut self, reg: u8, value: u8) -> Result<(), String> {
-        self.set_reg8((reg & 0x3) | 0x4, value)  // Bottom 2 bits select AH, CH, DH, BH
+        self.set_reg8((reg & 0x3) | 0x4, value) // Bottom 2 bits select AH, CH, DH, BH
     }
 
     pub fn get_reg16(&self, reg: u8) -> u16 {
@@ -265,7 +279,8 @@ impl Registers {
         self.es
     }
 
+    #[allow(dead_code)]
     pub fn set_es(&mut self, value: u16) {
         self.es = value;
     }
-} 
+}

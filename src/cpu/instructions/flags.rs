@@ -1,6 +1,6 @@
-use crate::cpu::CPU;
+use crate::cpu::Cpu;
 
-impl CPU {
+impl Cpu {
     pub(crate) fn cli(&mut self) -> Result<(), String> {
         self.regs.flags.set_interrupt(false);
         Ok(())
@@ -21,6 +21,7 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn cmc(&mut self) -> Result<(), String> {
         self.regs.flags.set_carry(!self.regs.flags.get_carry());
         Ok(())
@@ -36,26 +37,30 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn sahf(&mut self) -> Result<(), String> {
         let ah = (self.regs.ax >> 8) as u8;
         self.regs.flags.set_from_byte(ah);
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn lahf(&mut self) -> Result<(), String> {
-        let flags_byte = self.regs.flags.as_byte();
-        self.regs.ax = (self.regs.ax & 0x00FF) | ((flags_byte as u16) << 8);
+        let flags = self.regs.flags.as_byte();
+        self.regs.ax = (self.regs.ax & 0x00FF) | ((flags as u16) << 8);
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn pushf(&mut self) -> Result<(), String> {
         let flags = self.regs.flags.as_u16();
         self.push_word(flags)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn popf(&mut self) -> Result<(), String> {
         let flags = self.pop_word()?;
         self.regs.flags.set_from_u16(flags);
         Ok(())
     }
-} 
+}

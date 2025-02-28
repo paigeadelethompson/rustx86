@@ -1,16 +1,16 @@
-use std::ops::{BitOr, BitAnd, Not};
+use std::ops::{BitAnd, BitOr, Not};
 
 #[derive(Debug, Clone)]
 pub struct Flags {
-    carry: bool,      // CF (bit 0)
-    parity: bool,     // PF (bit 2)
-    adjust: bool,     // AF (bit 4)
-    zero: bool,       // ZF (bit 6)
-    sign: bool,       // SF (bit 7)
-    trap: bool,       // TF (bit 8)
-    interrupt: bool,  // IF (bit 9)
-    direction: bool,  // DF (bit 10)
-    overflow: bool,   // OF (bit 11)
+    carry: bool,     // CF (bit 0)
+    parity: bool,    // PF (bit 2)
+    adjust: bool,    // AF (bit 4)
+    zero: bool,      // ZF (bit 6)
+    sign: bool,      // SF (bit 7)
+    trap: bool,      // TF (bit 8)
+    interrupt: bool, // IF (bit 9)
+    direction: bool, // DF (bit 10)
+    overflow: bool,  // OF (bit 11)
 }
 
 impl Flags {
@@ -28,6 +28,7 @@ impl Flags {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_word(word: u16) -> Flags {
         Flags {
             carry: (word & 0x0001) != 0,
@@ -42,33 +43,85 @@ impl Flags {
         }
     }
 
-    pub fn get_carry(&self) -> bool { self.carry }
-    pub fn get_parity(&self) -> bool { self.parity }
-    pub fn get_adjust(&self) -> bool { self.adjust }
-    pub fn get_zero(&self) -> bool { self.zero }
-    pub fn get_sign(&self) -> bool { self.sign }
-    pub fn get_trap(&self) -> bool { self.trap }
-    pub fn get_interrupt(&self) -> bool { self.interrupt }
-    pub fn get_direction(&self) -> bool { self.direction }
-    pub fn get_overflow(&self) -> bool { self.overflow }
+    pub fn get_carry(&self) -> bool {
+        self.carry
+    }
+    #[allow(dead_code)]
+    pub fn get_parity(&self) -> bool {
+        self.parity
+    }
+    #[allow(dead_code)]
+    pub fn get_adjust(&self) -> bool {
+        self.adjust
+    }
+    pub fn get_zero(&self) -> bool {
+        self.zero
+    }
+    #[allow(dead_code)]
+    pub fn get_sign(&self) -> bool {
+        self.sign
+    }
+    #[allow(dead_code)]
+    pub fn get_trap(&self) -> bool {
+        self.trap
+    }
+    #[allow(dead_code)]
+    pub fn get_interrupt(&self) -> bool {
+        self.interrupt
+    }
+    pub fn get_direction(&self) -> bool {
+        self.direction
+    }
+    pub fn get_overflow(&self) -> bool {
+        self.overflow
+    }
 
-    pub fn set_carry(&mut self, value: bool) { self.carry = value; }
-    pub fn set_parity(&mut self, value: bool) { self.parity = value; }
-    pub fn set_adjust(&mut self, value: bool) { self.adjust = value; }
-    pub fn set_zero(&mut self, value: bool) { self.zero = value; }
-    pub fn set_sign(&mut self, value: bool) { self.sign = value; }
-    pub fn set_trap(&mut self, value: bool) { self.trap = value; }
-    pub fn set_interrupt(&mut self, value: bool) { self.interrupt = value; }
-    pub fn set_direction(&mut self, value: bool) { self.direction = value; }
-    pub fn set_overflow(&mut self, value: bool) { self.overflow = value; }
+    pub fn set_carry(&mut self, value: bool) {
+        self.carry = value;
+    }
+    pub fn set_parity(&mut self, value: bool) {
+        self.parity = value;
+    }
+    pub fn set_adjust(&mut self, value: bool) {
+        self.adjust = value;
+    }
+    pub fn set_zero(&mut self, value: bool) {
+        self.zero = value;
+    }
+    pub fn set_sign(&mut self, value: bool) {
+        self.sign = value;
+    }
+    pub fn set_trap(&mut self, value: bool) {
+        self.trap = value;
+    }
+    pub fn set_interrupt(&mut self, value: bool) {
+        self.interrupt = value;
+    }
+    pub fn set_direction(&mut self, value: bool) {
+        self.direction = value;
+    }
+    pub fn set_overflow(&mut self, value: bool) {
+        self.overflow = value;
+    }
 
+    #[allow(dead_code)]
     pub fn as_byte(&self) -> u8 {
         let mut result = 0u8;
-        if self.carry { result |= 0x01; }
-        if self.parity { result |= 0x04; }
-        if self.adjust { result |= 0x10; }
-        if self.zero { result |= 0x40; }
-        if self.sign { result |= 0x80; }
+        if self.carry {
+            result |= 0x01;
+        }
+        if self.parity {
+            result |= 0x04;
+        }
+        if self.adjust {
+            result |= 0x10;
+        }
+        if self.zero {
+            result |= 0x40;
+        }
+        if self.sign {
+            result |= 0x80;
+        }
         result
     }
 
@@ -82,15 +135,33 @@ impl Flags {
 
     pub fn as_u16(&self) -> u16 {
         let mut result = 0u16;
-        if self.carry { result |= 0x0001; }
-        if self.parity { result |= 0x0004; }
-        if self.adjust { result |= 0x0010; }
-        if self.zero { result |= 0x0040; }
-        if self.sign { result |= 0x0080; }
-        if self.trap { result |= 0x0100; }
-        if self.interrupt { result |= 0x0200; }
-        if self.direction { result |= 0x0400; }
-        if self.overflow { result |= 0x0800; }
+        if self.carry {
+            result |= 0x0001;
+        }
+        if self.parity {
+            result |= 0x0004;
+        }
+        if self.adjust {
+            result |= 0x0010;
+        }
+        if self.zero {
+            result |= 0x0040;
+        }
+        if self.sign {
+            result |= 0x0080;
+        }
+        if self.trap {
+            result |= 0x0100;
+        }
+        if self.interrupt {
+            result |= 0x0200;
+        }
+        if self.direction {
+            result |= 0x0400;
+        }
+        if self.overflow {
+            result |= 0x0800;
+        }
         result
     }
 
@@ -106,20 +177,22 @@ impl Flags {
         self.overflow = (value & 0x0800) != 0;
     }
 
+    #[allow(dead_code)]
     pub fn update_flags_dec16(&mut self, result: u16) {
         // Zero flag
         self.set_zero(result == 0);
-        
+
         // Sign flag
         self.set_sign((result & 0x8000) != 0);
-        
+
         // Overflow flag (set if decrementing 0x8000)
         self.set_overflow(result == 0x7FFF);
-        
+
         // Auxiliary flag (set if decrementing a value with low nibble of 0)
         self.set_adjust((result & 0x0F) == 0x0F);
     }
 
+    #[allow(dead_code)]
     pub fn update_logical_flags(&mut self, result: u16) {
         self.set_zero(result == 0);
         self.set_sign((result & 0x8000) != 0);
@@ -138,15 +211,33 @@ impl Flags {
 
     pub fn as_word(&self) -> u16 {
         let mut word = 0u16;
-        if self.carry { word |= 0x0001; }
-        if self.parity { word |= 0x0004; }
-        if self.adjust { word |= 0x0010; }
-        if self.zero { word |= 0x0040; }
-        if self.sign { word |= 0x0080; }
-        if self.trap { word |= 0x0100; }
-        if self.interrupt { word |= 0x0200; }
-        if self.direction { word |= 0x0400; }
-        if self.overflow { word |= 0x0800; }
+        if self.carry {
+            word |= 0x0001;
+        }
+        if self.parity {
+            word |= 0x0004;
+        }
+        if self.adjust {
+            word |= 0x0010;
+        }
+        if self.zero {
+            word |= 0x0040;
+        }
+        if self.sign {
+            word |= 0x0080;
+        }
+        if self.trap {
+            word |= 0x0100;
+        }
+        if self.interrupt {
+            word |= 0x0200;
+        }
+        if self.direction {
+            word |= 0x0400;
+        }
+        if self.overflow {
+            word |= 0x0800;
+        }
         word
     }
 
@@ -162,34 +253,56 @@ impl Flags {
         self.overflow = (word & 0x0800) != 0;
     }
 
-    // Add missing flag methods
+    #[allow(dead_code)]
     pub fn zero_flag(&self) -> bool {
         self.zero
     }
 
+    #[allow(dead_code)]
     pub fn carry_flag(&self) -> bool {
         self.carry
     }
 
+    #[allow(dead_code)]
     pub fn overflow_flag(&self) -> bool {
         self.overflow
     }
 
+    #[allow(dead_code)]
     pub fn set_word(&mut self, word: u16) {
         self.set_from_word(word);
     }
 
+    #[allow(dead_code)]
     pub fn set_interrupt_flag(&mut self, value: bool) {
         self.set_interrupt(value);
     }
 
+    #[allow(dead_code)]
     pub fn set_trap_flag(&mut self, value: bool) {
         self.set_trap(value);
     }
 
+    #[allow(dead_code)]
     pub fn update_zero_and_sign_flags_16(&mut self, value: u16) {
         self.set_zero(value == 0);
         self.set_sign((value & 0x8000) != 0);
+    }
+
+    pub fn update_flags_add16(&mut self, a: u16, b: u16, result: u16) {
+        self.set_carry(result < a);
+        self.set_zero(result == 0);
+        self.set_sign((result & 0x8000) != 0);
+        self.set_overflow(((a ^ b) & 0x8000) == 0 && ((a ^ result) & 0x8000) != 0);
+        self.set_parity(result.count_ones() % 2 == 0);
+    }
+
+    pub fn update_flags_sub16(&mut self, a: u16, b: u16, result: u16) {
+        self.set_carry(a < b);
+        self.set_zero(result == 0);
+        self.set_sign((result & 0x8000) != 0);
+        self.set_overflow(((a ^ b) & 0x8000) != 0 && ((a ^ result) & 0x8000) != 0);
+        self.set_parity(result.count_ones() % 2 == 0);
     }
 }
 
@@ -218,4 +331,4 @@ impl Not for Flags {
         result.set_from_u16(!result.as_u16());
         result
     }
-} 
+}

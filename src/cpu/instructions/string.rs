@@ -1,6 +1,6 @@
-use crate::cpu::CPU;
+use crate::cpu::Cpu;
 
-impl CPU {
+impl Cpu {
     pub(crate) fn movsb(&mut self) -> Result<(), String> {
         let src_addr = self.get_physical_address(self.regs.ds, self.regs.si);
         let dst_addr = self.get_physical_address(self.regs.es, self.regs.di);
@@ -84,12 +84,13 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn cmpsb(&mut self) -> Result<(), String> {
         let src_addr = self.get_physical_address(self.regs.ds, self.regs.si);
         let dst_addr = self.get_physical_address(self.regs.es, self.regs.di);
         let src_val = self.memory.read_byte(src_addr);
         let dst_val = self.memory.read_byte(dst_addr);
-        
+
         let (result, carry) = dst_val.overflowing_sub(src_val);
         self.update_flags_sub(dst_val, src_val, result, carry);
 
@@ -103,12 +104,13 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn cmpsw(&mut self) -> Result<(), String> {
         let src_addr = self.get_physical_address(self.regs.ds, self.regs.si);
         let dst_addr = self.get_physical_address(self.regs.es, self.regs.di);
         let src_val = self.memory.read_word(src_addr);
         let dst_val = self.memory.read_word(dst_addr);
-        
+
         let (result, carry) = dst_val.overflowing_sub(src_val);
         self.update_flags_sub16(dst_val, src_val, result, carry);
 
@@ -122,11 +124,12 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn scasb(&mut self) -> Result<(), String> {
         let dst_addr = self.get_physical_address(self.regs.es, self.regs.di);
         let dst_val = self.memory.read_byte(dst_addr);
         let al = self.regs.ax as u8;
-        
+
         let (result, carry) = al.overflowing_sub(dst_val);
         self.update_flags_sub(al, dst_val, result, carry);
 
@@ -138,10 +141,11 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn scasw(&mut self) -> Result<(), String> {
         let dst_addr = self.get_physical_address(self.regs.es, self.regs.di);
         let dst_val = self.memory.read_word(dst_addr);
-        
+
         let (result, carry) = self.regs.ax.overflowing_sub(dst_val);
         self.update_flags_sub16(self.regs.ax, dst_val, result, carry);
 
@@ -152,4 +156,4 @@ impl CPU {
         }
         Ok(())
     }
-} 
+}

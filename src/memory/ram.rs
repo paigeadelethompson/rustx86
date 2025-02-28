@@ -1,14 +1,15 @@
-use std::any::Any;
 use super::Memory;
+use std::any::Any;
 
 pub struct RamMemory {
-    memory: Vec<u8>
+    memory: Vec<u8>,
 }
 
 impl RamMemory {
+    #[allow(dead_code)]
     pub fn new(size: usize) -> Self {
         RamMemory {
-            memory: vec![0; size]
+            memory: vec![0; size],
         }
     }
 }
@@ -41,4 +42,4 @@ impl Memory for RamMemory {
     fn as_any(&self) -> &dyn Any {
         self
     }
-} 
+}

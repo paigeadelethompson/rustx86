@@ -1,7 +1,6 @@
-use std::any::Any;
 use super::Memory;
 use crate::rom::BiosRom;
-use crate::disk::PARTITION_TABLE_OFFSET;
+use std::any::Any;
 
 pub struct SystemMemory {
     ram: Vec<u8>,
@@ -14,7 +13,7 @@ impl SystemMemory {
             ram: vec![0; ram_size],
             bios_rom: BiosRom::new(),
         };
-        
+
         // Verify ROM code after initialization
         system.bios_rom.verify_rom_code();
         system
@@ -27,7 +26,7 @@ impl SystemMemory {
 
 impl Memory for SystemMemory {
     fn read_byte(&self, addr: u32) -> u8 {
-        if addr >= 0xF0000 && addr <= 0xFFFFF {
+        if (0xF0000..=0xFFFFF).contains(&addr) {
             // BIOS ROM area (64KB)
             self.bios_rom.read_byte((addr - 0xF0000) as usize)
         } else if (addr as usize) < self.ram.len() {
@@ -40,7 +39,7 @@ impl Memory for SystemMemory {
     }
 
     fn write_byte(&mut self, addr: u32, value: u8) {
-        if addr >= 0xF0000 && addr <= 0xFFFFF {
+        if (0xF0000..=0xFFFFF).contains(&addr) {
             // BIOS ROM area - writes are ignored
         } else if (addr as usize) < self.ram.len() {
             // RAM area
@@ -55,4 +54,4 @@ impl Memory for SystemMemory {
     fn as_any(&self) -> &dyn Any {
         self
     }
-} 
+}

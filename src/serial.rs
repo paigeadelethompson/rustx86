@@ -1,92 +1,137 @@
+#[allow(dead_code)]
 // 8250 UART registers
 const THR: u8 = 0; // Transmitter Holding Register (write)
+#[allow(dead_code)]
 const RBR: u8 = 0; // Receiver Buffer Register (read)
+#[allow(dead_code)]
 const IER: u8 = 1; // Interrupt Enable Register
+#[allow(dead_code)]
 const IIR: u8 = 2; // Interrupt Identification Register (read)
+#[allow(dead_code)]
 const FCR: u8 = 2; // FIFO Control Register
+#[allow(dead_code)]
 const LCR: u8 = 3; // Line Control Register
+#[allow(dead_code)]
 const MCR: u8 = 4; // Modem Control Register
+#[allow(dead_code)]
 const LSR: u8 = 5; // Line Status Register
+#[allow(dead_code)]
 const MSR: u8 = 6; // Modem Status Register
+#[allow(dead_code)]
 const DLL: u8 = 0; // Divisor Latch LSB (when DLAB=1)
+#[allow(dead_code)]
 const DLM: u8 = 1; // Divisor Latch MSB (when DLAB=1)
 
+#[allow(dead_code)]
 // Line Status Register bits
-const LSR_DR: u8 = 0x01;   // Data Ready
-const LSR_OE: u8 = 0x02;   // Overrun Error
-const LSR_PE: u8 = 0x04;   // Parity Error
-const LSR_FE: u8 = 0x08;   // Framing Error
-const LSR_BI: u8 = 0x10;   // Break Interrupt
+const LSR_DR: u8 = 0x01; // Data Ready
+#[allow(dead_code)]
+const LSR_OE: u8 = 0x02; // Overrun Error
+#[allow(dead_code)]
+const LSR_PE: u8 = 0x04; // Parity Error
+#[allow(dead_code)]
+const LSR_FE: u8 = 0x08; // Framing Error
+#[allow(dead_code)]
+const LSR_BI: u8 = 0x10; // Break Interrupt
+#[allow(dead_code)]
 const LSR_THRE: u8 = 0x20; // THR Empty
+#[allow(dead_code)]
 const LSR_TEMT: u8 = 0x40; // Transmitter Empty
-const LSR_ERR: u8 = 0x80;  // Error in RCVR FIFO
+#[allow(dead_code)]
+const LSR_ERR: u8 = 0x80; // Error in RCVR FIFO
 
-// FIFO size
+#[allow(dead_code)]
+// FIFO size and port addresses
 const FIFO_SIZE: usize = 16;
-
-// Add port addresses
+#[allow(dead_code)]
 const COM1_BASE: u16 = 0x3F8;
+#[allow(dead_code)]
 const COM2_BASE: u16 = 0x2F8;
+#[allow(dead_code)]
 const COM3_BASE: u16 = 0x3E8;
+#[allow(dead_code)]
 const COM4_BASE: u16 = 0x2E8;
 
+#[allow(dead_code)]
 // Add interrupt types
 const INT_NONE: u8 = 0x01;
+#[allow(dead_code)]
 const INT_TX_EMPTY: u8 = 0x02;
+#[allow(dead_code)]
 const INT_RX_DATA: u8 = 0x04;
+#[allow(dead_code)]
 const INT_LINE_STATUS: u8 = 0x06;
+#[allow(dead_code)]
 const INT_MODEM_STATUS: u8 = 0x00;
 
 // Add line control bits
-const LCR_WORD_LENGTH: u8 = 0x03;  // Bits 0-1: Word length
-const LCR_STOP_BITS: u8 = 0x04;    // Bit 2: Stop bits
+#[allow(dead_code)]
+const LCR_WORD_LENGTH: u8 = 0x03; // Bits 0-1: Word length
+#[allow(dead_code)]
+const LCR_STOP_BITS: u8 = 0x04; // Bit 2: Stop bits
+#[allow(dead_code)]
 const LCR_PARITY_ENABLE: u8 = 0x08; // Bit 3: Parity enable
-const LCR_PARITY_EVEN: u8 = 0x10;  // Bit 4: Even parity
+#[allow(dead_code)]
+const LCR_PARITY_EVEN: u8 = 0x10; // Bit 4: Even parity
+#[allow(dead_code)]
 const LCR_STICK_PARITY: u8 = 0x20; // Bit 5: Stick parity
-const LCR_SET_BREAK: u8 = 0x40;    // Bit 6: Set break
-const LCR_DLAB: u8 = 0x80;         // Bit 7: DLAB
+#[allow(dead_code)]
+const LCR_SET_BREAK: u8 = 0x40; // Bit 6: Set break
+#[allow(dead_code)]
+const LCR_DLAB: u8 = 0x80; // Bit 7: DLAB
 
 // Add modem control bits
-const MCR_DTR: u8 = 0x01;  // Data Terminal Ready
-const MCR_RTS: u8 = 0x02;  // Request To Send
+#[allow(dead_code)]
+const MCR_DTR: u8 = 0x01; // Data Terminal Ready
+#[allow(dead_code)]
+const MCR_RTS: u8 = 0x02; // Request To Send
+#[allow(dead_code)]
 const MCR_OUT1: u8 = 0x04; // Out1
+#[allow(dead_code)]
 const MCR_OUT2: u8 = 0x08; // Out2 (interrupt enable)
+#[allow(dead_code)]
 const MCR_LOOP: u8 = 0x10; // Loopback mode
 
 // Add flow control constants
-const MSR_CTS: u8 = 0x10;  // Clear To Send
-const MSR_DSR: u8 = 0x20;  // Data Set Ready
-const MSR_RI: u8 = 0x40;   // Ring Indicator
-const MSR_DCD: u8 = 0x80;  // Data Carrier Detect
+#[allow(dead_code)]
+const MSR_CTS: u8 = 0x10; // Clear To Send
+#[allow(dead_code)]
+const MSR_DSR: u8 = 0x20; // Data Set Ready
+#[allow(dead_code)]
+const MSR_RI: u8 = 0x40; // Ring Indicator
+#[allow(dead_code)]
+const MSR_DCD: u8 = 0x80; // Data Carrier Detect
+#[allow(dead_code)]
 const MSR_DCTS: u8 = 0x01; // Delta CTS
+#[allow(dead_code)]
 const MSR_DDSR: u8 = 0x02; // Delta DSR
+#[allow(dead_code)]
 const MSR_TERI: u8 = 0x04; // Trailing Edge RI
+#[allow(dead_code)]
 const MSR_DDCD: u8 = 0x08; // Delta DCD
 
 // Add XON/XOFF characters for software flow control
-const XON: u8 = 0x11;   // DC1
-const XOFF: u8 = 0x13;  // DC3
+#[allow(dead_code)]
+const XON: u8 = 0x11; // DC1
+#[allow(dead_code)]
+const XOFF: u8 = 0x13; // DC3
 
 use std::collections::VecDeque;
-use std::io::Write;
 
+#[allow(dead_code)]
 pub struct SerialController {
     ports: Vec<Option<SerialPort>>,
 }
 
 impl SerialController {
+    #[allow(dead_code)]
     pub fn new() -> Self {
-        let mut ports = Vec::with_capacity(4);
-        // Initialize COM1 by default
-        ports.push(Some(SerialPort::new()));
-        // Other ports are initially disabled
-        ports.push(None);
-        ports.push(None);
-        ports.push(None);
-        
-        SerialController { ports }
+        Self {
+            ports: vec![Some(SerialPort::new()), None, None, None],
+        }
     }
 
+    #[allow(dead_code)]
     pub fn get_port(&mut self, index: usize) -> Option<&mut SerialPort> {
         if index < self.ports.len() {
             self.ports[index].as_mut()
@@ -95,6 +140,7 @@ impl SerialController {
         }
     }
 
+    #[allow(dead_code)]
     pub fn read_byte(&mut self, port: u16) -> u8 {
         let port_idx = (port & 0x07) as usize;
         if let Some(Some(p)) = self.ports.get_mut(port_idx) {
@@ -104,6 +150,7 @@ impl SerialController {
         }
     }
 
+    #[allow(dead_code)]
     pub fn write_byte(&mut self, port: u16, value: u8) {
         let port_idx = (port & 0x07) as usize;
         if let Some(Some(p)) = self.ports.get_mut(port_idx) {
@@ -111,28 +158,28 @@ impl SerialController {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_status(&self) -> Vec<SerialPortStatus> {
         let mut status = Vec::new();
-        for port in &self.ports {
-            if let Some(port) = port {
-                status.push(SerialPortStatus {
-                    base_port: port.base_port,
-                    baud_rate: port.baud_rate,
-                    data_bits: (port.lcr & LCR_WORD_LENGTH) + 5,
-                    stop_bits: if (port.lcr & LCR_STOP_BITS) != 0 { 2 } else { 1 },
-                    rx_fifo_count: port.rx_fifo.len(),
-                    tx_fifo_count: port.tx_fifo.len(),
-                    flow_control: FlowControl {
-                        hardware_flow_enabled: port.hardware_flow_enabled,
-                        xon_xoff_enabled: port.xon_xoff_enabled,
-                    },
-                });
-            }
+        for port in self.ports.iter().flatten() {
+            status.push(SerialPortStatus {
+                base_port: port.base_port,
+                baud_rate: port.baud_rate,
+                data_bits: 8,
+                stop_bits: 1,
+                rx_fifo_count: port.rx_fifo.len(),
+                tx_fifo_count: port.tx_fifo.len(),
+                flow_control: FlowControl {
+                    hardware_flow_enabled: port.hardware_flow_enabled,
+                    xon_xoff_enabled: port.xon_xoff_enabled,
+                },
+            });
         }
         status
     }
 }
 
+#[allow(dead_code)]
 pub struct SerialPort {
     pub base_port: u16,
     pub baud_rate: u32,
@@ -154,6 +201,7 @@ pub struct SerialPort {
 }
 
 impl SerialPort {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         SerialPort {
             initialized: false,
@@ -165,7 +213,7 @@ impl SerialPort {
             dlm: 0,
             lcr: 0,
             mcr: 0,
-            lsr: LSR_THRE | LSR_TEMT,  // Transmitter is empty
+            lsr: LSR_THRE | LSR_TEMT, // Transmitter is empty
             msr: 0,
             ier: 0,
             hardware_flow_enabled: false,
@@ -176,30 +224,37 @@ impl SerialPort {
         }
     }
 
+    #[allow(dead_code)]
     pub fn initialize(&mut self, _config: u8) {
         self.initialized = true;
     }
 
+    #[allow(dead_code)]
     pub fn read_byte(&mut self) -> Option<u8> {
         self.rx_fifo.pop_front()
     }
 
+    #[allow(dead_code)]
     pub fn write_byte(&mut self, value: u8) {
         self.tx_fifo.push_back(value);
     }
 
+    #[allow(dead_code)]
     pub fn has_data(&self) -> bool {
         !self.rx_fifo.is_empty()
     }
 
+    #[allow(dead_code)]
     pub fn add_input(&mut self, byte: u8) {
         self.input_buffer.push_back(byte);
     }
 
+    #[allow(dead_code)]
     pub fn get_output(&mut self) -> Option<u8> {
         self.output_buffer.pop_front()
     }
 
+    #[allow(dead_code)]
     pub fn get_status(&self) -> u8 {
         let mut status = 0;
         if self.initialized {
@@ -211,31 +266,32 @@ impl SerialPort {
         status
     }
 
+    #[allow(dead_code)]
     pub fn configure(&mut self, config: PortConfig) -> Result<(), String> {
         self.baud_rate = config.baud_rate;
         self.hardware_flow_enabled = config.hardware_flow_enabled;
         self.xon_xoff_enabled = config.xon_xoff_enabled;
-        
+
         // Calculate divisor for baud rate
         let divisor = (115200 / config.baud_rate) as u16;
         self.dll = (divisor & 0xFF) as u8;
         self.dlm = ((divisor >> 8) & 0xFF) as u8;
-        
+
         // Configure line control register
         self.lcr = match config.parity {
             Parity::None => 0x03, // 8N1
             Parity::Odd => 0x0B,  // 8O1
             Parity::Even => 0x1B, // 8E1
         };
-        
+
         // Configure modem control register
-        self.mcr = if config.dtr { MCR_DTR } else { 0 } |
-                   if config.rts { MCR_RTS } else { 0 } |
-                   MCR_OUT2;  // Enable interrupts
-                   
+        self.mcr =
+            if config.dtr { MCR_DTR } else { 0 } | if config.rts { MCR_RTS } else { 0 } | MCR_OUT2; // Enable interrupts
+
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn receive_byte(&mut self, value: u8) {
         if self.rx_fifo.len() < FIFO_SIZE {
             self.rx_fifo.push_back(value);
@@ -244,6 +300,7 @@ impl SerialPort {
     }
 }
 
+#[allow(dead_code)]
 pub struct PortStatus {
     pub rx_ready: bool,
     pub tx_ready: bool,
@@ -252,6 +309,7 @@ pub struct PortStatus {
     pub xon_state: bool,
 }
 
+#[allow(dead_code)]
 pub struct PortConfig {
     pub baud_rate: u32,
     pub parity: Parity,
@@ -261,15 +319,17 @@ pub struct PortConfig {
     pub xon_xoff_enabled: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum Parity {
     None,
     Odd,
     Even,
 }
 
-const IIR_NO_INT: u8 = 0x01;  // No interrupt pending
+#[allow(dead_code)]
+const IIR_NO_INT: u8 = 0x01; // No interrupt pending
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct SerialPortStatus {
     pub base_port: u16,
@@ -281,12 +341,14 @@ pub struct SerialPortStatus {
     pub flow_control: FlowControl,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct FlowControl {
     pub hardware_flow_enabled: bool,
     pub xon_xoff_enabled: bool,
 }
 
+#[allow(dead_code)]
 pub struct Serial {
     input_buffer: VecDeque<u8>,
     output_buffer: VecDeque<u8>,
@@ -295,18 +357,10 @@ pub struct Serial {
 
 impl Serial {
     pub fn new() -> Self {
-        let mut ports = Vec::with_capacity(4);
-        // Initialize COM1 by default
-        ports.push(Some(SerialPort::new()));
-        // Other ports are initially disabled
-        ports.push(None);
-        ports.push(None);
-        ports.push(None);
-
         Serial {
             input_buffer: VecDeque::new(),
             output_buffer: VecDeque::new(),
-            ports,
+            ports: vec![Some(SerialPort::new()), None, None, None],
         }
     }
 
@@ -327,16 +381,16 @@ impl Serial {
     }
 
     pub fn has_data(&self) -> bool {
-        let has_data = !self.input_buffer.is_empty();
-        has_data
+        !self.input_buffer.is_empty()
     }
 
+    #[allow(dead_code)]
     pub fn add_input(&mut self, byte: u8) {
         self.input_buffer.push_back(byte);
     }
 
+    #[allow(dead_code)]
     pub fn get_output(&mut self) -> Option<u8> {
-        let value = self.output_buffer.pop_front();
-        value
+        self.output_buffer.pop_front()
     }
-} 
+}

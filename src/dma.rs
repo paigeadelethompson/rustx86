@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub struct DMAChannel {
     current_address: u16,
     current_word_count: u16,
@@ -9,6 +10,7 @@ pub struct DMAChannel {
 }
 
 impl DMAChannel {
+    #[allow(dead_code)]
     fn new() -> Self {
         DMAChannel {
             current_address: 0,
@@ -22,6 +24,7 @@ impl DMAChannel {
     }
 }
 
+#[allow(dead_code)]
 pub struct DMAController {
     channels: [DMAChannel; 4],
     command: u8,
@@ -31,6 +34,7 @@ pub struct DMAController {
 }
 
 impl DMAController {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         DMAController {
             channels: [
@@ -46,6 +50,7 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     pub fn read_port(&self, port: u16) -> u8 {
         match port {
             0x00..=0x07 => self.read_channel_register(port),
@@ -61,6 +66,7 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     pub fn write_port(&mut self, port: u16, value: u8) {
         match port {
             0x00..=0x07 => self.write_channel_register(port, value),
@@ -77,6 +83,7 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     fn read_channel_register(&self, port: u16) -> u8 {
         let channel = (port >> 1) as usize;
         if channel >= 4 {
@@ -90,6 +97,7 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     fn write_channel_register(&mut self, port: u16, value: u8) {
         let channel = (port >> 1) as usize;
         if channel >= 4 {
@@ -98,12 +106,12 @@ impl DMAController {
 
         match port & 1 {
             0 => {
-                self.channels[channel].base_address = 
+                self.channels[channel].base_address =
                     (self.channels[channel].base_address & 0xFF00) | (value as u16);
                 self.channels[channel].current_address = self.channels[channel].base_address;
             }
             1 => {
-                self.channels[channel].base_address = 
+                self.channels[channel].base_address =
                     (self.channels[channel].base_address & 0x00FF) | ((value as u16) << 8);
                 self.channels[channel].current_address = self.channels[channel].base_address;
             }
@@ -111,17 +119,20 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     fn set_mask_bit(&mut self, value: u8) {
         let channel = value & 0x03;
         let mask = (value & 0x04) != 0;
         self.channels[channel as usize].mask = mask;
     }
 
+    #[allow(dead_code)]
     fn set_mode(&mut self, value: u8) {
         let channel = value & 0x03;
         self.channels[channel as usize].mode = value;
     }
 
+    #[allow(dead_code)]
     fn master_clear(&mut self) {
         self.command = 0;
         self.status = 0;
@@ -133,6 +144,7 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     fn clear_mask_register(&mut self) {
         self.mask = 0;
         for channel in &mut self.channels {
@@ -140,6 +152,7 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     fn write_page_register(&mut self, page_reg: u16, value: u8) {
         // Map page register to channel
         let channel = match page_reg {
@@ -156,6 +169,7 @@ impl DMAController {
         }
     }
 
+    #[allow(dead_code)]
     pub fn transfer(&mut self, channel: usize, memory: &mut [u8], io_buffer: &[u8]) -> bool {
         if channel >= 4 || self.channels[channel].mask {
             return false;
@@ -166,14 +180,16 @@ impl DMAController {
         let addr = ((ch.page as u32) << 16) | (ch.current_address as u32);
 
         match mode {
-            0x04 => { // Single transfer mode
-                if io_buffer.len() > 0 {
+            0x04 => {
+                // Single transfer mode
+                if !io_buffer.is_empty() {
                     memory[addr as usize] = io_buffer[0];
                     ch.current_address = ch.current_address.wrapping_add(1);
                     ch.current_word_count = ch.current_word_count.wrapping_sub(1);
                 }
             }
-            0x08 => { // Block transfer mode
+            0x08 => {
+                // Block transfer mode
                 let len = io_buffer.len().min(ch.current_word_count as usize);
                 for i in 0..len {
                     memory[(addr as usize) + i] = io_buffer[i];
@@ -186,4 +202,4 @@ impl DMAController {
 
         true
     }
-} 
+}

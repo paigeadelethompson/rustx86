@@ -1,6 +1,6 @@
-use crate::cpu::CPU;
+use crate::cpu::Cpu;
 
-impl CPU {
+impl Cpu {
     pub(crate) fn in_al_imm8(&mut self) -> Result<(), String> {
         let port = self.fetch_byte()?;
         let value = self.io_read_byte(port as u16)?;
@@ -67,4 +67,4 @@ impl CPU {
     pub(crate) fn io_write_word(&mut self, _port: u16, _value: u16) -> Result<(), String> {
         Ok(())
     }
-} 
+}

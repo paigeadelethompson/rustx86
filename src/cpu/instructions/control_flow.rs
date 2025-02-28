@@ -1,54 +1,56 @@
-use crate::cpu::CPU;
+use crate::cpu::Cpu;
 
-impl CPU {
-    pub fn jmp_near(&mut self) -> Result<(), String> {
-        let offset = self.fetch_word()? as i16;
-        let old_ip = self.regs.ip;
-        self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
+impl Cpu {
+    pub(crate) fn jmp_near(&mut self) -> Result<(), String> {
+        let offset = self.fetch_word()?;
+        let _old_ip = self.regs.ip;
+        self.regs.ip = self.regs.ip.wrapping_add(offset);
         Ok(())
     }
 
-    pub fn jmp_far(&mut self) -> Result<(), String> {
-        let ip = self.fetch_word()?;
-        let cs = self.fetch_word()?;
-        self.regs.cs = cs;
-        self.regs.ip = ip;
+    pub(crate) fn jmp_far(&mut self) -> Result<(), String> {
+        let offset = self.fetch_word()?;
+        let segment = self.fetch_word()?;
+        self.regs.cs = segment;
+        self.regs.ip = offset;
         Ok(())
     }
 
     pub fn jmp_short(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        let old_ip = self.regs.ip;
+        let _old_ip = self.regs.ip;
         self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         Ok(())
     }
 
-    pub fn call_near(&mut self) -> Result<(), String> {
+    pub(crate) fn call_near(&mut self) -> Result<(), String> {
         let offset = self.fetch_word()? as i16;
-        let return_addr = self.regs.ip;
-        self.push_word(return_addr)?;
+        self.push_word(self.regs.ip)?;
         self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn call_far(&mut self) -> Result<(), String> {
-        let ip = self.fetch_word()?;
-        let cs = self.fetch_word()?;
+        let offset = self.fetch_word()?;
+        let segment = self.fetch_word()?;
         let old_cs = self.regs.cs;
-        let old_ip = self.regs.ip;
+        let _old_ip = self.regs.ip;
         self.push_word(old_cs)?;
-        self.push_word(old_ip)?;
-        self.regs.cs = cs;
-        self.regs.ip = ip;
+        self.push_word(self.regs.ip)?;
+        self.regs.ip = offset;
+        self.regs.cs = segment;
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn ret_near(&mut self) -> Result<(), String> {
         let ip = self.pop_word()?;
         self.regs.ip = ip;
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn ret_far(&mut self) -> Result<(), String> {
         let ip = self.pop_word()?;
         let cs = self.pop_word()?;
@@ -57,6 +59,7 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn ret_near_imm16(&mut self) -> Result<(), String> {
         let ip = self.pop_word()?;
         let imm16 = self.fetch_word()?;
@@ -68,92 +71,92 @@ impl CPU {
     pub fn jcxz(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
         if self.regs.cx == 0 {
-            let old_ip = self.regs.ip;
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn loop_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn loop_cx(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        let old_cx = self.regs.cx;
+        let _old_cx = self.regs.cx;
         self.regs.cx = self.regs.cx.wrapping_sub(1);
         if self.regs.cx != 0 {
-            let old_ip = self.regs.ip;
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jz_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jz_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if self.regs.flags.zero_flag() {
-            let old_ip = self.regs.ip;
+        if self.regs.flags.get_zero() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jnz_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jnz_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if !self.regs.flags.zero_flag() {
-            let old_ip = self.regs.ip;
+        if !self.regs.flags.get_zero() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jo_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jo_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if self.regs.flags.overflow_flag() {
-            let old_ip = self.regs.ip;
+        if self.regs.flags.get_overflow() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jno_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jno_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if !self.regs.flags.overflow_flag() {
-            let old_ip = self.regs.ip;
+        if !self.regs.flags.get_overflow() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jb_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jb_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if self.regs.flags.carry_flag() {
-            let old_ip = self.regs.ip;
+        if self.regs.flags.get_carry() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jnb_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jnb_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if !self.regs.flags.carry_flag() {
-            let old_ip = self.regs.ip;
+        if !self.regs.flags.get_carry() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jbe_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jbe_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if self.regs.flags.carry_flag() || self.regs.flags.zero_flag() {
-            let old_ip = self.regs.ip;
+        if self.regs.flags.get_carry() || self.regs.flags.get_zero() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
 
-    pub fn jnbe_rel8(&mut self) -> Result<(), String> {
+    pub(crate) fn jnbe_rel8(&mut self) -> Result<(), String> {
         let offset = self.fetch_byte()? as i8;
-        if !self.regs.flags.carry_flag() && !self.regs.flags.zero_flag() {
-            let old_ip = self.regs.ip;
+        if !self.regs.flags.get_carry() && !self.regs.flags.get_zero() {
+            let _old_ip = self.regs.ip;
             self.regs.ip = self.regs.ip.wrapping_add(offset as u16);
         }
         Ok(())
     }
-} 
+}

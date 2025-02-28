@@ -1,10 +1,10 @@
-use super::CPU;
+use super::Cpu;
 use crate::cpu::SegmentRegister;
 
 // All instruction implementations should go in their respective modules under instructions/
 // This file should only contain the instruction dispatch logic (execute_instruction)
 
-impl CPU {    
+impl Cpu {
     pub fn execute_instruction(&mut self) -> Result<(), String> {
         // First check ROM validity
         if !self.memory.has_valid_rom() {
@@ -21,7 +21,7 @@ impl CPU {
             return Err("Cannot execute: No valid boot sector at LBA 63".to_string());
         }
 
-        let cs_ip = ((self.regs.cs as u32) << 4) + (self.regs.ip as u32);
+        let _cs_ip = ((self.regs.cs as u32) << 4) + (self.regs.ip as u32);
         let opcode = self.fetch_byte()?;
 
         match opcode {
@@ -57,7 +57,7 @@ impl CPU {
             0xCD => {
                 let interrupt_number = self.fetch_byte()?;
                 Ok(self.int(interrupt_number)?)
-            },
+            }
 
             // Arithmetic Instructions
             0x00 => Ok(self.add_rm8_r8()?),
@@ -78,7 +78,7 @@ impl CPU {
                 self.execute_instruction()?;
                 self.clear_segment_override();
                 Ok(())
-            },
+            }
             0x1C => Ok(self.sbb_al_imm8()?),
 
             // Logic Instructions
@@ -94,7 +94,7 @@ impl CPU {
             0xEA => Ok(self.jmp_far()?),
             0xEB => Ok(self.jmp_short()?),
             0xE3 => Ok(self.jcxz()?),
-            0xE2 => Ok(self.loop_rel8()?),
+            0xE2 => Ok(self.loop_cx()?),
             0x70 => Ok(self.jo_rel8()?),
             0x71 => Ok(self.jno_rel8()?),
             0x72 => Ok(self.jb_rel8()?),
@@ -145,7 +145,7 @@ impl CPU {
             0xF4 => {
                 self.halted = true;
                 Ok(())
-            },
+            }
             // 0xF1 => Ok(self.int1()?),
 
             // Stack Instructions
@@ -164,14 +164,15 @@ impl CPU {
             0xD4 => Ok(self.aam()?),
 
             // Stack Instructions
-            0xC8 => Ok(self.enter()?),
+            0xC8 => {
+                let nesting_level = self.fetch_byte()? & 0x1F;
+                Ok(self.enter(nesting_level)?)
+            }
             0xC9 => Ok(self.leave()?),
             0xCA => Ok(self.ret_far_imm16()?),
 
             // Prefix Instructions
-            0xF0 => {
-                self.execute_instruction()
-            },
+            0xF0 => self.execute_instruction(),
 
             _ => {
                 self.halted = true;

@@ -1,31 +1,30 @@
 // IMPORTANT: This is a HEADLESS emulator that uses serial port for TTY output.
 // DO NOT implement video/graphics functionality. All output goes through serial port.
 
-use crate::cpu::CPU;
-use crate::disk::DiskImage;
+use crate::cpu::Cpu;
 use chrono::{Datelike, Timelike};
-use std::io::{self, Write};
-use crate::io::Error;
+use std::io::Write;
 
+#[allow(dead_code)]
 const SERIAL_PORT: u16 = 0x3F8; // COM1 port
 
-pub fn init_bios_interrupts(cpu: &mut CPU) {
+pub fn init_bios_interrupts(cpu: &mut Cpu) {
     // Initialize interrupt vector table at 0x0000
-    
+
     // INT 10h - Video Services
     set_interrupt_vector(cpu, 0x10, bios_seg(), video_services_offset());
-    
+
     // INT 14h - Serial Services (Primary TTY output)
     set_interrupt_vector(cpu, 0x14, bios_seg(), serial_services_offset());
-    
+
     // INT 13h - Disk Services
     set_interrupt_vector(cpu, 0x13, bios_seg(), disk_services_offset());
-    
+
     // INT 16h - Keyboard Services
     set_interrupt_vector(cpu, 0x16, bios_seg(), keyboard_services_offset());
 }
 
-fn set_interrupt_vector(cpu: &mut CPU, int_num: u8, segment: u16, offset: u16) {
+fn set_interrupt_vector(cpu: &mut Cpu, int_num: u8, segment: u16, offset: u16) {
     let addr = (int_num as u32) * 4;
     cpu.memory.write_word(addr, offset);
     cpu.memory.write_word(addr + 2, segment);
@@ -36,11 +35,11 @@ fn bios_seg() -> u16 {
 }
 
 fn video_services_offset() -> u16 {
-    0xE300  // Point to our video interrupt handler in ROM
+    0xE300 // Point to our video interrupt handler in ROM
 }
 
 fn serial_services_offset() -> u16 {
-    0xE000  // Point to our serial interrupt handler in ROM
+    0xE000 // Point to our serial interrupt handler in ROM
 }
 
 fn keyboard_services_offset() -> u16 {
@@ -51,21 +50,33 @@ fn disk_services_offset() -> u16 {
     0x0200 // We'll implement this later
 }
 
-pub fn handle_bios_interrupt(cpu: &mut CPU, int_num: u8) -> Result<(), String> {
+pub fn handle_bios_interrupt(cpu: &mut Cpu, int_num: u8) -> Result<(), String> {
     match int_num {
         0x10 => handle_video_interrupt(cpu),
         0x14 => handle_serial_interrupt(cpu),
         0x13 => handle_disk_interrupt(cpu),
         0x16 => handle_keyboard_interrupt(cpu),
-        0x11 => { cpu.int11_equipment_list()?; Ok(()) },    // Get Equipment List
-        0x12 => { cpu.int12_memory_size()?; Ok(()) },       // Get Memory Size
-        0x15 => { cpu.int15_system_services()?; Ok(()) },   // System Services
-        0x1A => { cpu.int1a_time_services()?; Ok(()) },     // Time Services
+        0x11 => {
+            cpu.int11_equipment_list()?;
+            Ok(())
+        } // Get Equipment List
+        0x12 => {
+            cpu.int12_memory_size()?;
+            Ok(())
+        } // Get Memory Size
+        0x15 => {
+            cpu.int15_system_services()?;
+            Ok(())
+        } // System Services
+        0x1A => {
+            cpu.int1a_time_services()?;
+            Ok(())
+        } // Time Services
         _ => Err(format!("Unhandled BIOS interrupt: {:02X}", int_num)),
     }
 }
 
-fn handle_video_interrupt(cpu: &mut CPU) -> Result<(), String> {
+fn handle_video_interrupt(cpu: &mut Cpu) -> Result<(), String> {
     match cpu.regs.get_ah() {
         0x0E => {
             // Redirect TTY output to serial port
@@ -78,13 +89,13 @@ fn handle_video_interrupt(cpu: &mut CPU) -> Result<(), String> {
     }
 }
 
-fn handle_serial_interrupt(cpu: &mut CPU) -> Result<(), String> {
+fn handle_serial_interrupt(cpu: &mut Cpu) -> Result<(), String> {
     match cpu.regs.get_ah() {
         0x00 => {
             // Initialize port
-            let port = cpu.regs.get_dx() as u32;  // Convert to u32
-            let divisor = 0x0C;  // 9600 baud
-            
+            let port = cpu.regs.get_dx() as u32; // Convert to u32
+            let divisor = 0x0C; // 9600 baud
+
             // Set DLAB
             cpu.memory.write_byte(port + 3, 0x80);
             // Set divisor
@@ -96,15 +107,15 @@ fn handle_serial_interrupt(cpu: &mut CPU) -> Result<(), String> {
             cpu.memory.write_byte(port + 2, 0xC7);
             // IRQs enabled, RTS/DSR set
             cpu.memory.write_byte(port + 4, 0x0B);
-            
-            cpu.regs.set_ah(0);  // Success
+
+            cpu.regs.set_ah(0); // Success
             Ok(())
         }
         0x01 => {
             // Send character
-            let char = cpu.regs.get_al() & 0xFF;  // Only use low byte
+            let char = cpu.regs.get_al(); // Only use low byte
             cpu.serial.write_byte(0x3F8, char);
-            cpu.regs.set_ah(0);  // Success
+            cpu.regs.set_ah(0); // Success
             Ok(())
         }
         0x02 => {
@@ -120,13 +131,14 @@ fn handle_serial_interrupt(cpu: &mut CPU) -> Result<(), String> {
             cpu.regs.set_ah(status);
             Ok(())
         }
-        _ => {
-            Err(format!("Unhandled serial interrupt function: {:#04X}", cpu.regs.get_ah()))
-        }
+        _ => Err(format!(
+            "Unhandled serial interrupt function: {:#04X}",
+            cpu.regs.get_ah()
+        )),
     }
 }
 
-fn handle_keyboard_interrupt(cpu: &mut CPU) -> Result<(), String> {
+fn handle_keyboard_interrupt(cpu: &mut Cpu) -> Result<(), String> {
     match cpu.regs.get_ah() {
         0x00 => {
             // Read character
@@ -137,7 +149,7 @@ fn handle_keyboard_interrupt(cpu: &mut CPU) -> Result<(), String> {
     }
 }
 
-pub fn handle_disk_interrupt(cpu: &mut CPU) -> Result<(), String> {
+pub fn handle_disk_interrupt(cpu: &mut Cpu) -> Result<(), String> {
     let function = cpu.regs.get_ah();
     let drive = cpu.regs.get_dl();
 
@@ -159,14 +171,18 @@ pub fn handle_disk_interrupt(cpu: &mut CPU) -> Result<(), String> {
             // Calculate LBA = (cylinder * heads_per_cylinder + head) * sectors_per_track + (sector - 1)
             let heads_per_cylinder = 16;
             let sectors_per_track = 63;
-            let lba = ((cylinder as u32 * heads_per_cylinder as u32 + head as u32) 
-                      * sectors_per_track as u32 + (sector - 1) as u32) as u32;
+            let lba = (cylinder as u32 * heads_per_cylinder as u32 + head as u32)
+                * sectors_per_track as u32
+                + (sector - 1) as u32;
 
             let mut success = true;
             for i in 0..count {
                 if let Some(sector_data) = cpu.disk.read_sector(lba + i as u32) {
                     // Process sector data
-                    let dest_addr = cpu.get_physical_address(buffer_segment, buffer_offset.wrapping_add((i as u16) * 512));
+                    let dest_addr = cpu.get_physical_address(
+                        buffer_segment,
+                        buffer_offset.wrapping_add((i as u16) * 512),
+                    );
                     for (j, &byte) in sector_data.iter().enumerate() {
                         cpu.memory.write_byte(dest_addr + j as u32, byte);
                     }
@@ -189,22 +205,23 @@ pub fn handle_disk_interrupt(cpu: &mut CPU) -> Result<(), String> {
             // Get Drive Parameters
             if drive == 0x80 {
                 // Hard disk parameters
-                let max_cylinder = 1023;  // 0-1023 (1024 cylinders)
-                let max_head = 15;        // 0-15 (16 heads)
-                let max_sector = 63;      // 1-63 (63 sectors)
-                let num_drives = 1;       // Number of hard drives
+                let max_cylinder = 1023; // 0-1023 (1024 cylinders)
+                let max_head = 15; // 0-15 (16 heads)
+                let max_sector = 63; // 1-63 (63 sectors)
+                let num_drives = 1; // Number of hard drives
 
                 // Return values
-                cpu.regs.set_ah(0);           // Status (success)
-                cpu.regs.set_al(0);           // Reserved (0)
-                cpu.regs.set_bl(4);           // Drive type (4 = Fixed disk)
+                cpu.regs.set_ah(0); // Status (success)
+                cpu.regs.set_al(0); // Reserved (0)
+                cpu.regs.set_bl(4); // Drive type (4 = Fixed disk)
                 cpu.regs.set_ch(max_cylinder as u8); // Low 8 bits of max cylinder number
-                cpu.regs.set_cl(((max_cylinder >> 8) << 6) as u8 | max_sector); // High 2 bits of cylinder in bits 6-7, max sector in bits 0-5
-                cpu.regs.set_dh(max_head);    // Maximum head number
-                cpu.regs.set_dl(num_drives);  // Number of drives
+                cpu.regs
+                    .set_cl(((max_cylinder >> 8) << 6) as u8 | max_sector); // High 2 bits of cylinder in bits 6-7, max sector in bits 0-5
+                cpu.regs.set_dh(max_head); // Maximum head number
+                cpu.regs.set_dl(num_drives); // Number of drives
                 cpu.regs.flags.set_carry(false); // Success
             } else {
-                cpu.regs.set_ah(0x01);        // Invalid drive
+                cpu.regs.set_ah(0x01); // Invalid drive
                 cpu.regs.flags.set_carry(true); // Error
             }
             Ok(())
@@ -216,7 +233,7 @@ pub fn handle_disk_interrupt(cpu: &mut CPU) -> Result<(), String> {
     }
 }
 
-impl CPU {
+impl Cpu {
     fn int11_equipment_list(&mut self) -> Result<(), String> {
         self.regs.ax = BIOS_EQUIPMENT_LIST;
         Ok(())
@@ -279,6 +296,7 @@ impl CPU {
         }
     }
 
+    #[allow(dead_code)]
     fn int16_keyboard_services(&mut self) -> Result<(), String> {
         match self.regs.ax >> 8 {
             0x00 => {
@@ -293,7 +311,7 @@ impl CPU {
             }
             0x02 => {
                 // Get keyboard shift status
-                self.regs.ax = (self.regs.ax & 0xFF00) | 0x00;
+                self.regs.ax &= 0xFF00;
             }
             _ => {
                 self.regs.flags.set_carry(true);
@@ -305,17 +323,17 @@ impl CPU {
 
 // Add these constants for BIOS services
 const BIOS_EQUIPMENT_LIST: u16 = 0b0000_0010_0000_0011; // Base memory, serial port, no display
-const BIOS_MEMORY_SIZE: u16 = 640; // 640K conventional memory 
+const BIOS_MEMORY_SIZE: u16 = 640; // 640K conventional memory
 
-pub fn init_bios_data_area(cpu: &mut CPU) {
+pub fn init_bios_data_area(cpu: &mut Cpu) {
     // BIOS data area starts at 0x0400
-    
+
     // Equipment list (serial ports only, no display)
     cpu.memory.write_word(0x0410, 0x0001);
-    
+
     // Base memory size (640KB)
     cpu.memory.write_word(0x0413, 640);
-    
+
     // COM port addresses
     cpu.memory.write_word(0x0400, 0x3F8); // COM1
     cpu.memory.write_word(0x0402, 0x2F8); // COM2
@@ -323,36 +341,65 @@ pub fn init_bios_data_area(cpu: &mut CPU) {
     cpu.memory.write_word(0x0406, 0x2E8); // COM4
 }
 
-pub fn print_debug(_cpu: &mut CPU, _msg: &str) {
+#[allow(dead_code)]
+pub fn print_debug(_cpu: &mut Cpu, _msg: &str) {
     // Debug printing disabled
 }
 
 // Add error code constants
+#[allow(dead_code)]
 const ERR_SUCCESS: u8 = 0x00;
+#[allow(dead_code)]
 const ERR_INVALID_COMMAND: u8 = 0x01;
+#[allow(dead_code)]
 const ERR_ADDRESS_MARK: u8 = 0x02;
+#[allow(dead_code)]
 const ERR_WRITE_PROTECT: u8 = 0x03;
+#[allow(dead_code)]
 const ERR_SECTOR_NOT_FOUND: u8 = 0x04;
+#[allow(dead_code)]
 const ERR_RESET_FAILED: u8 = 0x05;
+#[allow(dead_code)]
 const ERR_DISK_CHANGED: u8 = 0x06;
+#[allow(dead_code)]
 const ERR_DRIVE_PARAMETER: u8 = 0x07;
+#[allow(dead_code)]
 const ERR_DMA_OVERRUN: u8 = 0x08;
+#[allow(dead_code)]
 const ERR_DMA_BOUNDARY: u8 = 0x09;
+#[allow(dead_code)]
 const ERR_BAD_SECTOR: u8 = 0x0A;
+#[allow(dead_code)]
 const ERR_BAD_TRACK: u8 = 0x0B;
+#[allow(dead_code)]
 const ERR_MEDIA_TYPE: u8 = 0x0C;
+#[allow(dead_code)]
 const ERR_INVALID_SECTORS: u8 = 0x0D;
+#[allow(dead_code)]
 const ERR_INVALID_DRIVE: u8 = 0x80;
 
+#[allow(dead_code)]
 fn check_dma_boundary(addr: u32, size: u32) -> bool {
     // Check if transfer crosses 64K boundary
     let end_addr = addr + size - 1;
     (addr & 0xFFFF0000) == (end_addr & 0xFFFF0000)
 }
 
-fn perform_dma_transfer(cpu: &mut CPU, channel: usize, buffer: &mut [u8], addr: u32, size: usize) -> bool {
-    print_debug(cpu, &format!("DMA transfer: channel={}, addr={:08X}, size={:04X}\n", 
-        channel, addr, size));
+#[allow(dead_code)]
+fn perform_dma_transfer(
+    cpu: &mut Cpu,
+    channel: usize,
+    buffer: &mut [u8],
+    addr: u32,
+    size: usize,
+) -> bool {
+    print_debug(
+        cpu,
+        &format!(
+            "DMA transfer: channel={}, addr={:08X}, size={:04X}\n",
+            channel, addr, size
+        ),
+    );
 
     if !check_dma_boundary(addr, size as u32) {
         print_debug(cpu, "DMA Error: Transfer would cross 64K boundary\n");
@@ -365,27 +412,26 @@ fn perform_dma_transfer(cpu: &mut CPU, channel: usize, buffer: &mut [u8], addr: 
     }
 
     // Simulate DMA transfer by copying memory
-    let src_slice = unsafe {
-        std::slice::from_raw_parts(addr as *const u8, size)
-    };
+    let src_slice = unsafe { std::slice::from_raw_parts(addr as *const u8, size) };
     buffer.copy_from_slice(src_slice);
     true
 }
 
-fn handle_time_interrupt(cpu: &mut CPU) -> Result<(), String> {
+#[allow(dead_code)]
+fn handle_time_interrupt(cpu: &mut Cpu) -> Result<(), String> {
     match cpu.regs.get_ah() {
         0x00 => {
             // Get system time
             let now = chrono::Local::now();
             cpu.regs.set_al(0); // Midnight flag
-            cpu.regs.set_cx((now.hour() << 8 | now.minute()) as u16);
+            cpu.regs.set_cx(((now.hour() << 8) | now.minute()) as u16);
             cpu.regs.set_dx((now.second() << 8) as u16);
             Ok(())
         }
         0x02 => {
             // Get real-time clock time
             let now = chrono::Local::now();
-            cpu.regs.set_cx((now.hour() << 8 | now.minute()) as u16);
+            cpu.regs.set_cx(((now.hour() << 8) | now.minute()) as u16);
             cpu.regs.set_dx((now.second() << 8) as u16);
             Ok(())
         }
@@ -393,9 +439,13 @@ fn handle_time_interrupt(cpu: &mut CPU) -> Result<(), String> {
             // Get real-time clock date
             let now = chrono::Local::now();
             cpu.regs.set_cx(now.year() as u16);
-            cpu.regs.set_dx(((now.month() as u16) << 8 | now.day() as u16));
+            cpu.regs
+                .set_dx(((now.month() as u16) << 8) | now.day() as u16);
             Ok(())
         }
-        _ => Err(format!("Unhandled time interrupt function: {:02X}", cpu.regs.get_ah())),
+        _ => Err(format!(
+            "Unhandled time interrupt function: {:02X}",
+            cpu.regs.get_ah()
+        )),
     }
-} 
+}

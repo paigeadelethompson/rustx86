@@ -1,6 +1,6 @@
-use crate::cpu::CPU;
+use crate::cpu::Cpu;
 
-impl CPU {
+impl Cpu {
     pub(crate) fn mov_rm8_r8(&mut self) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
         let reg = (modrm >> 3) & 0x07;
@@ -48,9 +48,12 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn mov_al_moffs8(&mut self) -> Result<(), String> {
         let offset = self.fetch_word()?;
-        let val = self.memory.read_byte(self.get_physical_address(self.regs.ds, offset));
+        let val = self
+            .memory
+            .read_byte(self.get_physical_address(self.regs.ds, offset));
         self.regs.ax = (self.regs.ax & 0xFF00) | (val as u16);
         Ok(())
     }
@@ -103,9 +106,12 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn mov_ax_moffs16(&mut self) -> Result<(), String> {
         let offset = self.fetch_word()?;
-        let val = self.memory.read_word(self.get_physical_address(self.regs.ds, offset));
+        let val = self
+            .memory
+            .read_word(self.get_physical_address(self.regs.ds, offset));
         self.regs.ax = val;
         Ok(())
     }
@@ -156,4 +162,4 @@ impl CPU {
     }
 
     // More data transfer instructions can be added here...
-} 
+}

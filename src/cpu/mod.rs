@@ -1,17 +1,16 @@
-pub mod flags;
-pub mod registers;
-pub mod instructions;
 pub mod execute;
+pub mod flags;
+pub mod instructions;
+pub mod registers;
 
-use std::fmt;
+use crate::disk::{DiskImage, PARTITION_TABLE_OFFSET};
 use crate::memory::Memory;
 use crate::memory::SystemMemory;
 use crate::serial::Serial;
-use crate::disk::{DiskImage, PARTITION_TABLE_OFFSET};
-pub use flags::Flags;
 pub use registers::Registers;
+use std::fmt;
 
-pub struct CPU {
+pub struct Cpu {
     pub regs: Registers,
     pub memory: Box<dyn Memory>,
     pub serial: Serial,
@@ -24,6 +23,7 @@ pub struct CPU {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum SegmentRegister {
     CS,
     DS,
@@ -31,7 +31,7 @@ pub enum SegmentRegister {
     SS,
 }
 
-impl CPU {
+impl Cpu {
     pub fn new(memory: Box<dyn Memory>, serial: Serial, disk: DiskImage) -> Self {
         // Check if disk has valid MBR boot code
         let mbr = match disk.read_sector(0) {
@@ -45,10 +45,9 @@ impl CPU {
             Some(data) => data,
             None => vec![0; 512],
         };
-        let boot_valid = boot.len() == 512 && 
-            boot[510] == 0x55 && boot[511] == 0xAA; // Must have valid boot signature
+        let boot_valid = boot.len() == 512 && boot[510] == 0x55 && boot[511] == 0xAA; // Must have valid boot signature
 
-        CPU {
+        Cpu {
             memory,
             regs: Registers::new(),
             serial,
@@ -70,14 +69,17 @@ impl CPU {
         }
     }
 
+    #[allow(dead_code)]
     pub fn has_valid_mbr(&self) -> bool {
         self.has_valid_mbr
     }
 
+    #[allow(dead_code)]
     pub fn has_valid_boot_sector(&self) -> bool {
         self.has_valid_boot_sector
     }
 
+    #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.regs.reset();
         self.halted = false;
@@ -88,11 +90,12 @@ impl CPU {
         self.halted
     }
 
+    #[allow(dead_code)]
     pub fn run(&mut self) -> Result<(), String> {
         if self.halted {
             return Ok(());
         }
-        
+
         self.execute_instruction()
     }
 
@@ -128,9 +131,11 @@ impl CPU {
             let segment = match rm {
                 2 | 3 | 6 if mod_bits == 0 && rm == 6 => self.regs.ds, // Special case for direct address
                 2 | 3 | 6 => self.regs.ss, // BP-based addressing uses SS
-                _ => self.regs.ds, // Other cases use DS
+                _ => self.regs.ds,         // Other cases use DS
             };
-            Ok(self.memory.read_byte(self.get_physical_address(segment, addr as u16)))
+            Ok(self
+                .memory
+                .read_byte(self.get_physical_address(segment, addr as u16)))
         }
     }
 
@@ -147,9 +152,10 @@ impl CPU {
             let segment = match rm {
                 2 | 3 | 6 if mod_bits == 0 && rm == 6 => self.regs.ds, // Special case for direct address
                 2 | 3 | 6 => self.regs.ss, // BP-based addressing uses SS
-                _ => self.regs.ds, // Other cases use DS
+                _ => self.regs.ds,         // Other cases use DS
             };
-            self.memory.write_byte(self.get_physical_address(segment, addr as u16), value);
+            self.memory
+                .write_byte(self.get_physical_address(segment, addr as u16), value);
         }
         Ok(())
     }
@@ -167,9 +173,11 @@ impl CPU {
             let segment = match rm {
                 2 | 3 | 6 if mod_bits == 0 && rm == 6 => self.regs.ds, // Special case for direct address
                 2 | 3 | 6 => self.regs.ss, // BP-based addressing uses SS
-                _ => self.regs.ds, // Other cases use DS
+                _ => self.regs.ds,         // Other cases use DS
             };
-            Ok(self.memory.read_word(self.get_physical_address(segment, addr as u16)))
+            Ok(self
+                .memory
+                .read_word(self.get_physical_address(segment, addr as u16)))
         }
     }
 
@@ -186,9 +194,10 @@ impl CPU {
             let segment = match rm {
                 2 | 3 | 6 if mod_bits == 0 && rm == 6 => self.regs.ds, // Special case for direct address
                 2 | 3 | 6 => self.regs.ss, // BP-based addressing uses SS
-                _ => self.regs.ds, // Other cases use DS
+                _ => self.regs.ds,         // Other cases use DS
             };
-            self.memory.write_word(self.get_physical_address(segment, addr as u16), value);
+            self.memory
+                .write_word(self.get_physical_address(segment, addr as u16), value);
         }
         Ok(())
     }
@@ -197,9 +206,9 @@ impl CPU {
         self.regs.flags.set_carry(carry);
         self.regs.flags.set_zero(result == 0);
         self.regs.flags.set_sign((result & 0x80) != 0);
-        self.regs.flags.set_overflow(
-            ((a ^ b) & (a ^ result) & 0x80) != 0
-        );
+        self.regs
+            .flags
+            .set_overflow(((a ^ b) & (a ^ result) & 0x80) != 0);
         self.regs.flags.set_parity(result.count_ones() % 2 == 0);
     }
 
@@ -207,24 +216,30 @@ impl CPU {
         self.regs.flags.set_carry(carry);
         self.regs.flags.set_zero(result == 0);
         self.regs.flags.set_sign((result & 0x8000) != 0);
-        self.regs.flags.set_overflow(
-            ((a ^ b) & (a ^ result) & 0x8000) != 0
-        );
-        self.regs.flags.set_parity((result as u8).count_ones() % 2 == 0);
+        self.regs
+            .flags
+            .set_overflow(((a ^ b) & (a ^ result) & 0x8000) != 0);
+        self.regs
+            .flags
+            .set_parity((result as u8).count_ones() % 2 == 0);
     }
 
     pub(crate) fn update_flags_inc16(&mut self, result: u16) {
         self.regs.flags.set_zero(result == 0);
         self.regs.flags.set_sign((result & 0x8000) != 0);
         self.regs.flags.set_overflow(result == 0x8000);
-        self.regs.flags.set_parity((result as u8).count_ones() % 2 == 0);
+        self.regs
+            .flags
+            .set_parity((result as u8).count_ones() % 2 == 0);
     }
 
     pub(crate) fn update_flags_dec16(&mut self, result: u16) {
         self.regs.flags.set_zero(result == 0);
         self.regs.flags.set_sign((result & 0x8000) != 0);
         self.regs.flags.set_overflow(result == 0x7FFF);
-        self.regs.flags.set_parity((result as u8).count_ones() % 2 == 0);
+        self.regs
+            .flags
+            .set_parity((result as u8).count_ones() % 2 == 0);
     }
 
     pub(crate) fn get_rm_addr(&mut self, modrm: u8) -> Result<u32, String> {
@@ -237,11 +252,11 @@ impl CPU {
             (1, _) => {
                 let disp = self.fetch_byte()? as i8;
                 self.get_rm_addr_mode0(rm)?.wrapping_add(disp as u32)
-            },
+            }
             (2, _) => {
                 let disp = self.fetch_word()? as i16;
                 self.get_rm_addr_mode0(rm)?.wrapping_add(disp as u32)
-            },
+            }
             _ => return Err("Invalid ModR/M addressing mode".to_string()),
         };
 
@@ -268,33 +283,41 @@ impl CPU {
         self.regs.flags.set_sign((result as i8) < 0);
         if is_sub {
             self.regs.flags.set_carry(op1 < op2);
-            self.regs.flags.set_overflow(
-                ((op1 ^ op2) & (op1 ^ result) & 0x80) != 0
-            );
+            self.regs
+                .flags
+                .set_overflow(((op1 ^ op2) & (op1 ^ result) & 0x80) != 0);
         } else {
             self.regs.flags.set_carry(result < op1);
-            self.regs.flags.set_overflow(
-                ((op1 ^ result) & (op2 ^ result) & 0x80) != 0
-            );
+            self.regs
+                .flags
+                .set_overflow(((op1 ^ result) & (op2 ^ result) & 0x80) != 0);
         }
         self.regs.flags.set_parity(result.count_ones() % 2 == 0);
     }
 
-    pub(crate) fn update_flags_arithmetic_16(&mut self, op1: u16, op2: u16, result: u16, is_sub: bool) {
+    pub(crate) fn update_flags_arithmetic_16(
+        &mut self,
+        op1: u16,
+        op2: u16,
+        result: u16,
+        is_sub: bool,
+    ) {
         self.regs.flags.set_zero(result == 0);
         self.regs.flags.set_sign((result as i16) < 0);
         if is_sub {
             self.regs.flags.set_carry(op1 < op2);
-            self.regs.flags.set_overflow(
-                ((op1 ^ op2) & (op1 ^ result) & 0x8000) != 0
-            );
+            self.regs
+                .flags
+                .set_overflow(((op1 ^ op2) & (op1 ^ result) & 0x8000) != 0);
         } else {
             self.regs.flags.set_carry(result < op1);
-            self.regs.flags.set_overflow(
-                ((op1 ^ result) & (op2 ^ result) & 0x8000) != 0
-            );
+            self.regs
+                .flags
+                .set_overflow(((op1 ^ result) & (op2 ^ result) & 0x8000) != 0);
         }
-        self.regs.flags.set_parity((result as u8).count_ones() % 2 == 0);
+        self.regs
+            .flags
+            .set_parity((result as u8).count_ones() % 2 == 0);
     }
 
     pub(crate) fn push(&mut self, value: u16) -> Result<(), String> {
@@ -304,6 +327,7 @@ impl CPU {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn pop(&mut self) -> Result<u16, String> {
         let addr = self.get_physical_address(self.regs.ss, self.regs.sp);
         let value = self.memory.read_word(addr);
@@ -311,15 +335,18 @@ impl CPU {
         Ok(value)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn read_word(&mut self, addr: u32) -> Result<u16, String> {
         Ok(self.memory.read_word(addr))
     }
 
+    #[allow(dead_code)]
     pub(crate) fn write_word(&mut self, addr: u32, value: u16) -> Result<(), String> {
         self.memory.write_word(addr, value);
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn step(&mut self) -> Result<(), String> {
         if self.halted {
             return Ok(());
@@ -333,7 +360,9 @@ impl CPU {
     pub(crate) fn update_flags_inc(&mut self, operand: u16, result: u16) {
         self.regs.flags.set_zero(result == 0);
         self.regs.flags.set_sign((result & 0x8000) != 0);
-        self.regs.flags.set_parity((result as u8).count_ones() % 2 == 0);
+        self.regs
+            .flags
+            .set_parity((result as u8).count_ones() % 2 == 0);
         self.regs.flags.set_overflow(operand == 0x7FFF);
         self.regs.flags.set_adjust((operand & 0xF) == 0xF);
     }
@@ -347,8 +376,12 @@ impl CPU {
     }
 }
 
-impl fmt::Debug for CPU {
+impl fmt::Debug for Cpu {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CPU {{ regs: {:?}, halted: {} }}", self.regs, self.halted)
+        write!(
+            f,
+            "CPU {{ regs: {:?}, halted: {} }}",
+            self.regs, self.halted
+        )
     }
-} 
+}

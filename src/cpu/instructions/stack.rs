@@ -1,67 +1,65 @@
-use crate::cpu::CPU;
-use crate::cpu::fmt::Error;
-use crate::memory::Memory;
+use crate::cpu::Cpu;
 
-impl CPU {
-    pub(crate) fn push_ax(&mut self) -> Result<(), String> {
+impl Cpu {
+    pub fn push_ax(&mut self) -> Result<(), String> {
         self.push_word(self.regs.ax)?;
         Ok(())
     }
 
-    pub(crate) fn push_cx(&mut self) -> Result<(), String> {
+    pub fn push_cx(&mut self) -> Result<(), String> {
         self.push_word(self.regs.cx)?;
         Ok(())
     }
 
-    pub(crate) fn push_dx(&mut self) -> Result<(), String> {
+    pub fn push_dx(&mut self) -> Result<(), String> {
         self.push_word(self.regs.dx)?;
         Ok(())
     }
 
-    pub(crate) fn push_bx(&mut self) -> Result<(), String> {
+    pub fn push_bx(&mut self) -> Result<(), String> {
         self.push_word(self.regs.bx)?;
         Ok(())
     }
 
-    pub(crate) fn push_es(&mut self) -> Result<(), String> {
+    pub fn push_es(&mut self) -> Result<(), String> {
         self.push_word(self.regs.es)?;
         Ok(())
     }
 
-    pub(crate) fn push_word(&mut self, value: u16) -> Result<(), String> {
+    pub fn push_word(&mut self, value: u16) -> Result<(), String> {
         // Decrement SP by 2 (word size)
         self.regs.sp = self.regs.sp.wrapping_sub(2);
-        
+
         // Calculate physical address for the stack
-        let address = (self.regs.ss as u32) << 4 | (self.regs.sp as u32);
-        
+        let address = ((self.regs.ss as u32) << 4) | (self.regs.sp as u32);
+
         // Write the word to memory
         self.memory.write_word(address, value);
-        
+
         Ok(())
     }
 
-    pub(crate) fn pop_cx(&mut self) -> Result<(), String> {
+    pub fn pop_cx(&mut self) -> Result<(), String> {
         self.regs.cx = self.pop_word()?;
         Ok(())
     }
 
-    pub(crate) fn pop_dx(&mut self) -> Result<(), String> {
+    pub fn pop_dx(&mut self) -> Result<(), String> {
         self.regs.dx = self.pop_word()?;
         Ok(())
     }
 
-    pub(crate) fn pop_bx(&mut self) -> Result<(), String> {
+    pub fn pop_bx(&mut self) -> Result<(), String> {
         self.regs.bx = self.pop_word()?;
         Ok(())
     }
 
-    pub(crate) fn pop_ax(&mut self) -> Result<(), String> {
+    pub fn pop_ax(&mut self) -> Result<(), String> {
         self.regs.ax = self.pop_word()?;
         Ok(())
     }
 
-    pub(crate) fn pop_es(&mut self) -> Result<(), String> {
+    pub fn pop_es(&mut self) -> Result<(), String> {
         self.regs.es = self.pop_word()?;
         Ok(())
     }
@@ -72,30 +70,22 @@ impl CPU {
         Ok(())
     }
 
-    pub fn enter(&mut self) -> Result<(), String> {
+    pub fn enter(&mut self, nesting_level: u8) -> Result<(), String> {
         let frame_size = self.fetch_word()?;
-        let nesting_level = self.fetch_byte()? & 0x1F;
-        
-        // Save BP
-        self.push_word(self.regs.bp)?;
-        
-        let frame_temp = self.regs.sp;
-        
-        // Copy previous stack frame pointers if nesting level > 0
+        let bp = self.regs.bp;
+        self.push_word(bp)?;
+        let frame_ptr = self.regs.sp;
+
         if nesting_level > 0 {
-            for level in 1..=nesting_level {
-                self.regs.bp -= 2;
-                let addr = ((self.regs.ss as u32) << 4) + self.regs.bp as u32;
-                let temp = self.read_word(addr)?;
+            for _level in 1..=nesting_level {
+                self.regs.bp = self.regs.bp.wrapping_sub(2);
+                let temp = self.memory.read_word(self.regs.bp as u32);
                 self.push_word(temp)?;
             }
-            // Push the temporary frame pointer value
-            self.push_word(frame_temp)?;
         }
-        
-        self.regs.bp = frame_temp;
-        self.regs.sp -= frame_size;
-        
+
+        self.regs.bp = frame_ptr;
+        self.regs.sp = self.regs.sp.wrapping_sub(frame_size);
         Ok(())
     }
 
@@ -108,4 +98,4 @@ impl CPU {
         self.regs.cs = cs;
         Ok(())
     }
-} 
+}

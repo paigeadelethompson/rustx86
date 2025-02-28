@@ -1,7 +1,7 @@
-use crate::cpu::CPU;
 use crate::bios::handle_bios_interrupt;
+use crate::cpu::Cpu;
 
-impl CPU {
+impl Cpu {
     pub(crate) fn int(&mut self, interrupt_number: u8) -> Result<(), String> {
         // Save flags and CS:IP
         let flags = self.regs.flags.as_word();
@@ -46,4 +46,4 @@ impl CPU {
 
         Ok(())
     }
-} 
+}
