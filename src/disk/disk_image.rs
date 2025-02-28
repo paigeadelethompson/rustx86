@@ -182,7 +182,7 @@ impl DiskImage {
         println!("FAT table first bytes: {:?}", &self.fat_table[..4]);
 
         // For sectors beyond disk size, return a zeroed sector
-        if lba >= FAT16_TOTAL_SECTORS as u32 {
+        if lba >= FAT16_TOTAL_SECTORS {
             return Some(sector);
         }
 
@@ -236,15 +236,13 @@ impl DiskImage {
     }
 
     fn sector_to_region(&self, sector: u32) -> DiskRegion {
-        if sector == 0 {
+        if sector == 0 || sector == BOOT_SECTOR {
             DiskRegion::BootSector
-        } else if sector == BOOT_SECTOR {
-            DiskRegion::BootSector
-        } else if sector >= FAT1_START && sector < FAT2_START {
+        } else if (FAT1_START..FAT2_START).contains(&sector) {
             DiskRegion::FAT1
-        } else if sector >= FAT2_START && sector < ROOT_DIR_START {
+        } else if (FAT2_START..ROOT_DIR_START).contains(&sector) {
             DiskRegion::FAT2
-        } else if sector >= ROOT_DIR_START && sector < DATA_START {
+        } else if (ROOT_DIR_START..DATA_START).contains(&sector) {
             DiskRegion::RootDirectory
         } else {
             DiskRegion::Data

@@ -96,7 +96,7 @@ impl Mbr {
 
         // Calculate geometry-based values
         let sectors_per_cylinder = SECTORS_PER_TRACK * HEADS_PER_CYLINDER;
-        let total_cylinders = (FAT16_TOTAL_SECTORS + sectors_per_cylinder as u32 - 1) / sectors_per_cylinder as u32;
+        let total_cylinders = FAT16_TOTAL_SECTORS.div_ceil(sectors_per_cylinder as u32);
         let end_cylinder = if total_cylinders > 1024 {
             1023 // Maximum cylinder value in CHS addressing
         } else {

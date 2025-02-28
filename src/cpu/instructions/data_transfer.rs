@@ -57,6 +57,7 @@ impl Cpu {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn mov_al_moffs8(&mut self) -> Result<(), String> {
         let offset = self.fetch_word()?;
         println!("MOV: offset = 0x{:04X}", offset);

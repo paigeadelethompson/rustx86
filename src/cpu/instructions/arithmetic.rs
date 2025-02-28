@@ -53,7 +53,7 @@ impl Cpu {
     pub fn adc_r8_rm8(&mut self) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
         let dest = self.get_rm8(modrm)?;
-        let src = self.regs.get_reg8(modrm >> 3 & 0x7);
+        let src = self.regs.get_reg8((modrm >> 3) & 0x7);
         let carry = if self.regs.flags.get_carry() { 1 } else { 0 };
         println!("ADC: dest={:02X}, src={:02X}, carry={}", dest, src, carry);
         let (result, carry1) = dest.overflowing_add(src);
@@ -139,13 +139,15 @@ impl Cpu {
         self.regs.flags.set_parity(result.count_ones() % 2 == 0);
     }
 
-    pub fn update_flags_add16(&mut self, a: u16, b: u16, result: u16, carry: bool) {
+    pub fn update_flags_add16(&mut self, _a: u16, _b: u16, result: u16, carry: bool) {
         self.regs.flags.set_carry(carry);
         self.regs.flags.set_zero(result == 0);
         self.regs.flags.set_sign((result & 0x8000) != 0);
+        let result_i16 = result as i16;
+        let overflow = !(-0x8000..=0x7FFF).contains(&result_i16);
         self.regs
             .flags
-            .set_overflow(((a ^ !b) & (a ^ result) & 0x8000) != 0);
+            .set_overflow(overflow);
         self.regs
             .flags
             .set_parity((result as u8).count_ones() % 2 == 0);
@@ -185,7 +187,7 @@ impl Cpu {
         let reg = (modrm >> 3) & 0x07;
         self.regs.set_reg16(reg, result as u16)?;
         // Set flags based on overflow
-        let overflow = result > 0x7FFF || result < -0x8000;
+        let overflow = !(-0x8000..=0x7FFF).contains(&(result as i16));
         self.regs.flags.set_carry(overflow);
         self.regs.flags.set_overflow(overflow);
         self.regs.flags.set_sign((result as i16) < 0);

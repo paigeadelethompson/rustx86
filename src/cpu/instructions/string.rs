@@ -104,6 +104,7 @@ impl Cpu {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(crate) fn cmpsw(&mut self) -> Result<(), String> {
         let src_addr = self.get_physical_address(self.regs.ds, self.regs.si);
         let dst_addr = self.get_physical_address(self.regs.es, self.regs.di);

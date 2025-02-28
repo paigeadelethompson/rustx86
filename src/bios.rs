@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_bios_data_area() {
-        let mut cpu = setup_test_cpu();
+        let cpu = setup_test_cpu();
 
         // Test equipment list
         assert_eq!(cpu.memory.read_word(0x410), 0x0001);
