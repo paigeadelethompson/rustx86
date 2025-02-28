@@ -7,9 +7,8 @@
  */
 
 use dos_emu::{
-    init_bios_data_area, init_bios_interrupts,
-    Cpu, DiskImage, Serial, SystemMemory,
-    disk::PARTITION_TABLE_OFFSET,
+    disk::PARTITION_TABLE_OFFSET, init_bios_data_area, init_bios_interrupts, Cpu, DiskImage,
+    Serial, SystemMemory,
 };
 use std::path::PathBuf;
 
@@ -78,4 +77,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-} 
+}

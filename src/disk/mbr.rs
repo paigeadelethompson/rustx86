@@ -24,6 +24,12 @@ pub struct PartitionEntry {
     pub total_sectors: u32,
 }
 
+impl Default for Mbr {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Mbr {
     pub fn new() -> Self {
         Mbr {
@@ -175,12 +181,12 @@ mod tests {
     #[test]
     fn test_mbr_new() {
         let mbr = Mbr::new();
-        
+
         // Test default values
         assert_eq!(mbr.boot_code, [0; PARTITION_TABLE_OFFSET]);
         assert_eq!(mbr.signature, MBR_SIGNATURE);
         assert_eq!(mbr.partitions.len(), NUM_PARTITIONS);
-        
+
         // Test that all partitions are empty
         for partition in &mbr.partitions {
             assert!(!partition.bootable);
@@ -193,15 +199,18 @@ mod tests {
     fn test_mbr_to_bytes() {
         let mbr = Mbr::new();
         let bytes = mbr.to_bytes();
-        
+
         // Test size
         assert_eq!(bytes.len(), SECTOR_SIZE);
-        
+
         // Test signature
         assert_eq!(bytes[SECTOR_SIZE - 2..], MBR_SIGNATURE);
-        
+
         // Test partition table offset
-        assert_eq!(&bytes[..PARTITION_TABLE_OFFSET], &[0; PARTITION_TABLE_OFFSET]);
+        assert_eq!(
+            &bytes[..PARTITION_TABLE_OFFSET],
+            &[0; PARTITION_TABLE_OFFSET]
+        );
     }
 
     #[test]
@@ -209,13 +218,13 @@ mod tests {
         let original = Mbr::new();
         let bytes = original.to_bytes();
         let parsed = Mbr::from_bytes(&bytes).unwrap();
-        
+
         // Test signature matches
         assert_eq!(parsed.signature, original.signature);
-        
+
         // Test boot code matches
         assert_eq!(parsed.boot_code, original.boot_code);
-        
+
         // Test partitions match
         for (orig, parsed) in original.partitions.iter().zip(parsed.partitions.iter()) {
             assert_eq!(orig.bootable, parsed.bootable);
@@ -228,19 +237,19 @@ mod tests {
     fn test_create_bootable_fat16_mbr() {
         let boot_code = vec![0xEB, 0x3C, 0x90]; // Common FAT16 boot code start
         let mbr = Mbr::create_bootable_fat16_mbr(boot_code).unwrap();
-        
+
         // Test boot code was copied
         assert_eq!(mbr.boot_code[0], 0xEB);
         assert_eq!(mbr.boot_code[1], 0x3C);
         assert_eq!(mbr.boot_code[2], 0x90);
-        
+
         // Test first partition is bootable FAT16
         let partition = &mbr.partitions[0];
         assert!(partition.bootable);
         assert_eq!(partition.system_id, FAT16_SYSTEM_ID);
         assert_eq!(partition.start_lba, 63);
         assert_eq!(partition.total_sectors, FAT16_TOTAL_SECTORS);
-        
+
         // Test other partitions are empty
         for partition in &mbr.partitions[1..] {
             assert!(!partition.bootable);
@@ -253,7 +262,7 @@ mod tests {
     fn test_mbr_from_bytes_invalid_size() {
         let result = Mbr::from_bytes(&[0; SECTOR_SIZE - 1]);
         assert!(result.is_err());
-        
+
         let error_msg = result.unwrap_err();
         assert!(error_msg.contains("Invalid MBR data size"));
     }
@@ -265,11 +274,11 @@ mod tests {
         let original = Mbr::create_bootable_fat16_mbr(boot_code).unwrap();
         let bytes = original.to_bytes();
         let parsed = Mbr::from_bytes(&bytes).unwrap();
-        
+
         // Test all fields match after roundtrip
         assert_eq!(parsed.boot_code, original.boot_code);
         assert_eq!(parsed.signature, original.signature);
-        
+
         for (orig, parsed) in original.partitions.iter().zip(parsed.partitions.iter()) {
             assert_eq!(orig.bootable, parsed.bootable);
             assert_eq!(orig.start_head, parsed.start_head);

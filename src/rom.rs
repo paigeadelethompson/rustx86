@@ -39,6 +39,12 @@ const SERIAL_HANDLER: &[u8] = &[
     0xCF, // IRET
 ];
 
+impl Default for BiosRom {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BiosRom {
     pub fn new() -> Self {
         // Initialize with basic BIOS code
@@ -140,7 +146,7 @@ mod tests {
         let rom = BiosRom::new();
         assert_eq!(rom.data.len(), 0x10000); // 64KB ROM size
         assert!(rom.has_valid_code());
-        
+
         // Check reset vector at F000:FFF0
         assert_eq!(rom.read_byte(0xFFF0), 0xEA); // Far JMP
         assert_eq!(rom.read_byte(0xFFF1), 0x5B); // IP = E05B
@@ -152,12 +158,12 @@ mod tests {
     #[test]
     fn test_bios_rom_serial_handler() {
         let rom = BiosRom::new();
-        
+
         // Test serial handler at F000:E000
         let serial_offset = 0xE000;
-        
+
         // Check first few bytes of serial handler
-        assert_eq!(rom.read_byte(serial_offset), 0x50);     // PUSH AX
+        assert_eq!(rom.read_byte(serial_offset), 0x50); // PUSH AX
         assert_eq!(rom.read_byte(serial_offset + 1), 0x53); // PUSH BX
         assert_eq!(rom.read_byte(serial_offset + 2), 0x51); // PUSH CX
         assert_eq!(rom.read_byte(serial_offset + 3), 0x52); // PUSH DX
@@ -166,7 +172,7 @@ mod tests {
     #[test]
     fn test_bios_rom_entry_point() {
         let rom = BiosRom::new();
-        
+
         // Test BIOS entry point at F000:E05B
         let entry_point = 0xE05B;
         assert_eq!(rom.read_byte(entry_point), 0xF4); // HLT instruction
@@ -175,13 +181,13 @@ mod tests {
     #[test]
     fn test_bios_rom_code_verification() {
         let mut rom = BiosRom::new();
-        
+
         // Test initial state
         assert!(rom.has_valid_code());
-        
+
         // Test verification
         assert!(rom.verify_rom_code());
-        
+
         // Test setting valid code flag
         rom.set_valid_code(false);
         assert!(!rom.has_valid_code());
@@ -192,7 +198,7 @@ mod tests {
     #[test]
     fn test_bios_rom_read_boundary() {
         let rom = BiosRom::new();
-        
+
         // Test reading beyond ROM size
         assert_eq!(rom.read_byte(0x10000), 0); // Should return 0 for out-of-bounds
         assert_eq!(rom.read_byte(0xFFFF), rom.data[0xFFFF]); // Last valid byte
@@ -201,25 +207,25 @@ mod tests {
     #[test]
     fn test_bios_rom_from_data() {
         let mut data = vec![0; 0x10000];
-        
+
         // Fill with test pattern
         for i in 0..0x10000 {
             data[i] = (i % 256) as u8;
         }
-        
+
         let rom = BiosRom::from_data(data);
-        
+
         // Verify size
         assert_eq!(rom.data.len(), 0x10000);
-        
+
         // Verify serial handler was installed
         let serial_offset = 0xE000;
         assert_eq!(rom.read_byte(serial_offset), 0x50); // PUSH AX
-        
+
         // Verify entry point
         let entry_point = 0xE05B;
         assert!(rom.read_byte(entry_point) != 0); // Should have code here
-        
+
         // Verify ROM is marked as valid
         assert!(rom.has_valid_code());
     }
@@ -228,10 +234,10 @@ mod tests {
     fn test_bios_rom_as_slice() {
         let rom = BiosRom::new();
         let slice = rom.as_slice();
-        
+
         // Verify slice length
         assert_eq!(slice.len(), 0x10000);
-        
+
         // Verify slice contents match direct reads
         for i in 0..0x10000 {
             assert_eq!(slice[i], rom.read_byte(i));

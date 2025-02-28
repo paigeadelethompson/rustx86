@@ -1,5 +1,4 @@
 use crate::cpu::Cpu;
-use std::path::Path;
 
 impl Cpu {
     pub fn push_ax(&mut self) -> Result<(), String> {
@@ -104,17 +103,17 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::disk::disk_image::DiskImage;
     use crate::memory::ram::RamMemory;
     use crate::serial::Serial;
-    use crate::disk::disk_image::DiskImage;
     use std::path::Path;
 
     fn setup_cpu() -> Cpu {
-        let memory = Box::new(RamMemory::new(1024 * 1024));  // 1MB RAM
+        let memory = Box::new(RamMemory::new(1024 * 1024)); // 1MB RAM
         let serial = Serial::new();
         let disk = DiskImage::new(Path::new("drive_c/")).expect("Failed to create disk image");
         let mut cpu = Cpu::new(memory, serial, disk);
-        cpu.regs.sp = 0x2000;  // Initialize stack pointer
+        cpu.regs.sp = 0x2000; // Initialize stack pointer
         cpu
     }
 
@@ -123,8 +122,11 @@ mod tests {
         let mut cpu = setup_cpu();
         cpu.regs.ax = 0x1234;
         assert!(cpu.push_ax().is_ok());
-        assert_eq!(cpu.regs.sp, 0x1FFE);  // SP should decrease by 2
-        assert_eq!(cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE), 0x1234);
+        assert_eq!(cpu.regs.sp, 0x1FFE); // SP should decrease by 2
+        assert_eq!(
+            cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE),
+            0x1234
+        );
     }
 
     #[test]
@@ -133,7 +135,10 @@ mod tests {
         cpu.regs.cx = 0x5678;
         assert!(cpu.push_cx().is_ok());
         assert_eq!(cpu.regs.sp, 0x1FFE);
-        assert_eq!(cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE), 0x5678);
+        assert_eq!(
+            cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE),
+            0x5678
+        );
     }
 
     #[test]
@@ -142,7 +147,10 @@ mod tests {
         cpu.regs.dx = 0x9ABC;
         assert!(cpu.push_dx().is_ok());
         assert_eq!(cpu.regs.sp, 0x1FFE);
-        assert_eq!(cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE), 0x9ABC);
+        assert_eq!(
+            cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE),
+            0x9ABC
+        );
     }
 
     #[test]
@@ -151,7 +159,10 @@ mod tests {
         cpu.regs.bx = 0xDEF0;
         assert!(cpu.push_bx().is_ok());
         assert_eq!(cpu.regs.sp, 0x1FFE);
-        assert_eq!(cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE), 0xDEF0);
+        assert_eq!(
+            cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE),
+            0xDEF0
+        );
     }
 
     #[test]
@@ -160,14 +171,18 @@ mod tests {
         cpu.regs.es = 0x1000;
         assert!(cpu.push_es().is_ok());
         assert_eq!(cpu.regs.sp, 0x1FFE);
-        assert_eq!(cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE), 0x1000);
+        assert_eq!(
+            cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE),
+            0x1000
+        );
     }
 
     #[test]
     fn test_pop_cx() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFE;
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x5678);
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x5678);
         assert!(cpu.pop_cx().is_ok());
         assert_eq!(cpu.regs.cx, 0x5678);
         assert_eq!(cpu.regs.sp, 0x2000);
@@ -177,7 +192,8 @@ mod tests {
     fn test_pop_dx() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFE;
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x9ABC);
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x9ABC);
         assert!(cpu.pop_dx().is_ok());
         assert_eq!(cpu.regs.dx, 0x9ABC);
         assert_eq!(cpu.regs.sp, 0x2000);
@@ -187,7 +203,8 @@ mod tests {
     fn test_pop_bx() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFE;
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0xDEF0);
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0xDEF0);
         assert!(cpu.pop_bx().is_ok());
         assert_eq!(cpu.regs.bx, 0xDEF0);
         assert_eq!(cpu.regs.sp, 0x2000);
@@ -197,7 +214,8 @@ mod tests {
     fn test_pop_ax() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFE;
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x1234);
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x1234);
         assert!(cpu.pop_ax().is_ok());
         assert_eq!(cpu.regs.ax, 0x1234);
         assert_eq!(cpu.regs.sp, 0x2000);
@@ -207,7 +225,8 @@ mod tests {
     fn test_pop_es() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFE;
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x1000);
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x1000);
         assert!(cpu.pop_es().is_ok());
         assert_eq!(cpu.regs.es, 0x1000);
         assert_eq!(cpu.regs.sp, 0x2000);
@@ -218,7 +237,8 @@ mod tests {
         let mut cpu = setup_cpu();
         cpu.regs.bp = 0x1FFE;
         cpu.regs.sp = 0x1FFC;
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x2000);
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x2000);
         assert!(cpu.leave().is_ok());
         assert_eq!(cpu.regs.bp, 0x2000);
         assert_eq!(cpu.regs.sp, 0x2000);
@@ -230,11 +250,11 @@ mod tests {
         let mut cpu = setup_cpu();
         cpu.regs.bp = 0x2000;
         cpu.regs.sp = 0x2000;
-        cpu.memory.write_word(0, 0x0010);  // Frame size
-        cpu.memory.write_byte(2, 0);       // Nesting level
+        cpu.memory.write_word(0, 0x0010); // Frame size
+        cpu.memory.write_byte(2, 0); // Nesting level
         assert!(cpu.enter(0).is_ok());
-        assert_eq!(cpu.regs.bp, 0x1FFE);   // New frame pointer
-        assert_eq!(cpu.regs.sp, 0x1FEE);   // SP = BP - frame_size
+        assert_eq!(cpu.regs.bp, 0x1FFE); // New frame pointer
+        assert_eq!(cpu.regs.sp, 0x1FEE); // SP = BP - frame_size
     }
 
     #[test]
@@ -242,12 +262,14 @@ mod tests {
     fn test_ret_far_imm16() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFC;
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFC, 0x1000);  // CS
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x0100);  // IP
-        cpu.memory.write_word(0, 0x0004);  // Immediate value
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFC, 0x1000); // CS
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x0100); // IP
+        cpu.memory.write_word(0, 0x0004); // Immediate value
         assert!(cpu.ret_far_imm16().is_ok());
         assert_eq!(cpu.regs.cs, 0x1000);
         assert_eq!(cpu.regs.ip, 0x0100);
-        assert_eq!(cpu.regs.sp, 0x2004);  // SP = original + 4 + imm16
+        assert_eq!(cpu.regs.sp, 0x2004); // SP = original + 4 + imm16
     }
 }

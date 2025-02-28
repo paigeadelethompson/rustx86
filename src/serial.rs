@@ -123,6 +123,12 @@ pub struct SerialController {
     ports: Vec<Option<SerialPort>>,
 }
 
+impl Default for SerialController {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SerialController {
     #[allow(dead_code)]
     pub fn new() -> Self {
@@ -198,6 +204,12 @@ pub struct SerialPort {
     pub initialized: bool,
     pub input_buffer: VecDeque<u8>,
     pub output_buffer: VecDeque<u8>,
+}
+
+impl Default for SerialPort {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SerialPort {
@@ -355,6 +367,12 @@ pub struct Serial {
     ports: Vec<Option<SerialPort>>,
 }
 
+impl Default for Serial {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Serial {
     pub fn new() -> Self {
         Serial {
@@ -420,7 +438,7 @@ mod tests {
             hardware_flow_enabled: true,
             xon_xoff_enabled: false,
         };
-        
+
         assert!(port.configure(config).is_ok());
         assert_eq!(port.baud_rate, 19200);
         assert!(port.hardware_flow_enabled);
@@ -432,12 +450,12 @@ mod tests {
     #[test]
     fn test_serial_port_data_transfer() {
         let mut port = SerialPort::new();
-        
+
         // Test write
         port.write_byte(0x41); // 'A'
         assert_eq!(port.tx_fifo.len(), 1);
         assert_eq!(port.tx_fifo[0], 0x41);
-        
+
         // Test read
         port.receive_byte(0x42); // 'B'
         assert_eq!(port.read_byte(), Some(0x42));
@@ -448,10 +466,10 @@ mod tests {
     #[ignore]
     fn test_serial_port_status() {
         let mut port = SerialPort::new();
-        
+
         // Test empty status
         assert!(!port.has_data());
-        
+
         // Test with data
         port.receive_byte(0x41);
         assert!(port.has_data());
@@ -472,11 +490,11 @@ mod tests {
     #[ignore]
     fn test_serial_controller_port_access() {
         let mut controller = SerialController::new();
-        
+
         // Test write to COM1
         controller.write_byte(COM1_BASE, 0x41);
         assert_eq!(controller.read_byte(COM1_BASE), 0x41);
-        
+
         // Test write to invalid port
         controller.write_byte(0x1234, 0x42);
         assert_eq!(controller.read_byte(0x1234), 0);
@@ -485,20 +503,20 @@ mod tests {
     #[test]
     fn test_serial_port_fifo() {
         let mut port = SerialPort::new();
-        
+
         // Fill FIFO
         for i in 0..FIFO_SIZE {
             port.receive_byte(i as u8);
         }
-        
+
         // Verify FIFO is full
         assert_eq!(port.rx_fifo.len(), FIFO_SIZE);
-        
+
         // Read from FIFO
         for i in 0..FIFO_SIZE {
             assert_eq!(port.read_byte(), Some(i as u8));
         }
-        
+
         // Verify FIFO is empty
         assert!(port.rx_fifo.is_empty());
     }
@@ -506,11 +524,11 @@ mod tests {
     #[test]
     fn test_serial_port_line_status() {
         let mut port = SerialPort::new();
-        
+
         // Test initial line status
         assert_eq!(port.lsr & LSR_THRE, LSR_THRE);
         assert_eq!(port.lsr & LSR_TEMT, LSR_TEMT);
-        
+
         // Test after receiving data
         port.receive_byte(0x41);
         assert_eq!(port.lsr & LSR_DR, LSR_DR);
@@ -519,12 +537,12 @@ mod tests {
     #[test]
     fn test_serial_port_modem_control() {
         let mut port = SerialPort::new();
-        
+
         // Test DTR and RTS signals
         port.mcr = MCR_DTR | MCR_RTS;
         assert_eq!(port.mcr & MCR_DTR, MCR_DTR);
         assert_eq!(port.mcr & MCR_RTS, MCR_RTS);
-        
+
         // Test interrupt enable
         assert_eq!(port.mcr & MCR_OUT2, 0);
         port.mcr |= MCR_OUT2;

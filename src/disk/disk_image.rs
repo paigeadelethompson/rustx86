@@ -18,6 +18,12 @@ pub struct BootSector {
     data: [u8; SECTOR_SIZE],
 }
 
+impl Default for BootSector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BootSector {
     pub fn new() -> Self {
         let mut data = [0u8; SECTOR_SIZE];
@@ -337,10 +343,10 @@ mod tests {
     fn test_boot_sector_new() {
         let boot_sector = BootSector::new();
         let bytes = boot_sector.as_bytes();
-        
+
         // Test size
         assert_eq!(bytes.len(), SECTOR_SIZE);
-        
+
         // Test boot signature
         assert_eq!(bytes[SECTOR_SIZE - 2], 0x55);
         assert_eq!(bytes[SECTOR_SIZE - 1], 0xAA);
@@ -350,7 +356,7 @@ mod tests {
     #[test]
     fn test_disk_geometry_default() {
         let geometry = DiskGeometry::default();
-        
+
         assert_eq!(geometry.cylinders, 80);
         assert_eq!(geometry.heads, 2);
         assert_eq!(geometry.sectors, 18);
@@ -361,17 +367,17 @@ mod tests {
     fn test_disk_image_new() {
         let path = PathBuf::from("test_drive.img");
         let disk_image = DiskImage::new(&path).unwrap();
-        
+
         // Test basic structure initialization
         assert_eq!(disk_image.boot_sector.len(), SECTOR_SIZE);
         assert!(!disk_image.write_protected);
-        
+
         // Test FAT table initialization
         assert!(!disk_image.fat_table.is_empty());
         assert_eq!(disk_image.fat_table[0], FAT16_MEDIA_DESCRIPTOR);
         assert_eq!(disk_image.fat_table[1], 0xFF);
         assert_eq!(disk_image.fat_table[2], 0xFF);
-        
+
         // Test partition setup
         assert!(disk_image.mbr.partitions[0].bootable);
         assert_eq!(disk_image.mbr.partitions[0].system_id, FAT16_SYSTEM_ID);
@@ -383,22 +389,22 @@ mod tests {
     fn test_disk_image_read_sector() {
         let path = PathBuf::from("test_drive.img");
         let disk_image = DiskImage::new(&path).unwrap();
-        
+
         // Test reading MBR (sector 0)
         let mbr_sector = disk_image.read_sector(0).unwrap();
         assert_eq!(mbr_sector.len(), SECTOR_SIZE);
         assert_eq!(&mbr_sector[SECTOR_SIZE - 2..], &MBR_SIGNATURE);
-        
+
         // Test reading boot sector (sector 63)
         let boot_sector = disk_image.read_sector(63).unwrap();
         assert_eq!(boot_sector.len(), SECTOR_SIZE);
         assert_eq!(boot_sector[SECTOR_SIZE - 2], 0x55);
         assert_eq!(boot_sector[SECTOR_SIZE - 1], 0xAA);
-        
+
         // Test reading FAT1 sector
         let fat_sector = disk_image.read_sector(FAT1_START).unwrap();
         assert_eq!(fat_sector[0], FAT16_MEDIA_DESCRIPTOR); // 0xF8 for fixed disk
-        
+
         // Test reading beyond disk size
         let far_sector = disk_image.read_sector(FAT16_TOTAL_SECTORS + 1000);
         assert!(far_sector.is_some()); // Returns zeroed sector
@@ -408,12 +414,15 @@ mod tests {
     fn test_disk_region_detection() {
         let path = PathBuf::from("test_drive.img");
         let disk_image = DiskImage::new(&path).unwrap();
-        
+
         // Test region detection
         assert_eq!(disk_image.sector_to_region(0), DiskRegion::BootSector);
         assert_eq!(disk_image.sector_to_region(FAT1_START), DiskRegion::FAT1);
         assert_eq!(disk_image.sector_to_region(FAT2_START), DiskRegion::FAT2);
-        assert_eq!(disk_image.sector_to_region(ROOT_DIR_START), DiskRegion::RootDirectory);
+        assert_eq!(
+            disk_image.sector_to_region(ROOT_DIR_START),
+            DiskRegion::RootDirectory
+        );
         assert_eq!(disk_image.sector_to_region(DATA_START), DiskRegion::Data);
     }
 
@@ -428,7 +437,7 @@ mod tests {
             FAT16_MEDIA_DESCRIPTOR,
             FAT16_SECTORS_PER_FAT,
         );
-        
+
         assert_eq!(bpb._bytes_per_sector, BYTES_PER_SECTOR);
         assert_eq!(bpb._sectors_per_cluster, FAT16_SECTORS_PER_CLUSTER);
         assert_eq!(bpb._reserved_sectors, FAT16_RESERVED_SECTORS);
@@ -450,16 +459,19 @@ mod tests {
             FAT16_MEDIA_DESCRIPTOR,
             FAT16_SECTORS_PER_FAT,
         );
-        
+
         let bytes = bpb.into_bytes();
-        
+
         // Test size
         assert_eq!(bytes.len(), 27);
-        
+
         // Test key fields
         assert_eq!(u16::from_le_bytes([bytes[0], bytes[1]]), BYTES_PER_SECTOR);
         assert_eq!(bytes[2], FAT16_SECTORS_PER_CLUSTER);
-        assert_eq!(u16::from_le_bytes([bytes[3], bytes[4]]), FAT16_RESERVED_SECTORS);
+        assert_eq!(
+            u16::from_le_bytes([bytes[3], bytes[4]]),
+            FAT16_RESERVED_SECTORS
+        );
         assert_eq!(bytes[5], FAT16_NUMBER_OF_FATS);
         assert_eq!(u16::from_le_bytes([bytes[6], bytes[7]]), FAT16_ROOT_ENTRIES);
         assert_eq!(bytes[10], FAT16_MEDIA_DESCRIPTOR);

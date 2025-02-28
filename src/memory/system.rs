@@ -1,7 +1,6 @@
 use super::Memory;
 use crate::rom::BiosRom;
 use std::any::Any;
-use crate::memory::ram::RamMemory;
 
 pub struct SystemMemory {
     ram: Vec<u8>,
@@ -64,7 +63,7 @@ mod tests {
     #[test]
     fn test_system_memory_initialization() {
         let system = SystemMemory::new(1024);
-        
+
         // Initial state should be zero
         for addr in 0..1024 {
             assert_eq!(system.read_byte(addr), 0);
@@ -74,11 +73,11 @@ mod tests {
     #[test]
     fn test_system_memory_byte_operations() {
         let mut system = SystemMemory::new(1024);
-        
+
         // Test byte write/read in RAM area
         system.write_byte(0x100, 0xAA);
         assert_eq!(system.read_byte(0x100), 0xAA);
-        
+
         // Test byte write/read in ROM area (should be ignored)
         system.write_byte(0xF0000, 0xBB);
         assert_ne!(system.read_byte(0xF0000), 0xBB);
@@ -87,7 +86,7 @@ mod tests {
     #[test]
     fn test_system_memory_word_operations() {
         let mut system = SystemMemory::new(1024);
-        
+
         // Test word write/read
         system.write_byte(0x200, 0xCD);
         system.write_byte(0x201, 0xAB);
@@ -98,11 +97,11 @@ mod tests {
     #[test]
     fn test_system_memory_boundaries() {
         let mut system = SystemMemory::new(1024);
-        
+
         // Test writing beyond RAM size
         system.write_byte(1024, 0x42); // Should be ignored
         assert_eq!(system.read_byte(1024), 0); // Should return 0
-        
+
         // Test ROM area access
         system.write_byte(0xF0000, 0x42); // Should be ignored
         assert!(system.read_byte(0xF0000) != 0x42); // ROM data should be preserved

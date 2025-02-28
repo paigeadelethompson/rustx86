@@ -1,5 +1,4 @@
 use crate::cpu::Cpu;
-use std::path::Path;
 
 impl Cpu {
     pub fn add_rm8_r8(&mut self) -> Result<(), String> {
@@ -46,12 +45,12 @@ impl Cpu {
         let reg = (modrm >> 3) & 0x07;
         let reg_val = self.regs.get_reg8(reg);
         let carry = if self.regs.flags.get_carry() { 1 } else { 0 };
-        
+
         // First add the carry to reg_val
         let (temp, carry1) = reg_val.overflowing_add(carry);
         // Then add the result to rm_val
         let (result, carry2) = temp.overflowing_add(rm_val);
-        
+
         self.regs.set_reg8(reg, result)?;
         // Update flags based on the final result
         self.update_flags_add(reg_val, rm_val, result, carry1 || carry2);
@@ -354,13 +353,13 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::disk::disk_image::DiskImage;
     use crate::memory::ram::RamMemory;
     use crate::serial::Serial;
-    use crate::disk::disk_image::DiskImage;
     use std::path::Path;
 
     fn setup_cpu() -> Cpu {
-        let memory = Box::new(RamMemory::new(1024 * 1024));  // 1MB RAM
+        let memory = Box::new(RamMemory::new(1024 * 1024)); // 1MB RAM
         let serial = Serial::new();
         let disk = DiskImage::new(Path::new("drive_c/")).expect("Failed to create disk image");
         Cpu::new(memory, serial, disk)
@@ -379,9 +378,9 @@ mod tests {
         // Result should be AL = AL + AH = 5 + 5 = 10
         assert_eq!(cpu.regs.get_al(), 10);
         // Check flags
-        assert!(!cpu.regs.flags.get_carry());  // No carry expected
-        assert!(!cpu.regs.flags.get_zero());   // Result is not zero
-        assert!(!cpu.regs.flags.get_sign());   // Result is positive
+        assert!(!cpu.regs.flags.get_carry()); // No carry expected
+        assert!(!cpu.regs.flags.get_zero()); // Result is not zero
+        assert!(!cpu.regs.flags.get_sign()); // Result is positive
     }
 
     #[test]
@@ -396,9 +395,9 @@ mod tests {
         // Result should be 0x0505 + 0x0505 = 0x0A0A
         assert_eq!(cpu.regs.get_ax(), 0x0A0A);
         // Check flags
-        assert!(!cpu.regs.flags.get_carry());  // No carry expected
-        assert!(!cpu.regs.flags.get_zero());   // Result is not zero
-        assert!(!cpu.regs.flags.get_sign());   // Result is positive
+        assert!(!cpu.regs.flags.get_carry()); // No carry expected
+        assert!(!cpu.regs.flags.get_zero()); // Result is not zero
+        assert!(!cpu.regs.flags.get_sign()); // Result is positive
     }
 
     #[test]
@@ -414,9 +413,9 @@ mod tests {
         // Result should be 5 + 3 = 8
         assert_eq!(cpu.regs.get_al(), 8);
         // Check flags
-        assert!(!cpu.regs.flags.get_carry());  // No carry expected
-        assert!(!cpu.regs.flags.get_zero());   // Result is not zero
-        assert!(!cpu.regs.flags.get_sign());   // Result is positive
+        assert!(!cpu.regs.flags.get_carry()); // No carry expected
+        assert!(!cpu.regs.flags.get_zero()); // Result is not zero
+        assert!(!cpu.regs.flags.get_sign()); // Result is positive
     }
 
     #[test]
@@ -434,19 +433,19 @@ mod tests {
         // Result should be AL = AL + AH + carry = 5 + 5 + 1 = 11 (0x0B)
         assert_eq!(cpu.regs.get_al(), 0x0B);
         // Check flags
-        assert!(!cpu.regs.flags.get_carry());  // No carry out
-        assert!(!cpu.regs.flags.get_zero());   // Result is not zero
-        assert!(!cpu.regs.flags.get_sign());   // Result is positive
+        assert!(!cpu.regs.flags.get_carry()); // No carry out
+        assert!(!cpu.regs.flags.get_zero()); // Result is not zero
+        assert!(!cpu.regs.flags.get_sign()); // Result is positive
     }
 
     #[test]
     fn test_cmp_al_imm8() {
         let mut cpu = setup_cpu();
-        cpu.regs.ax = 0x0005;  // AL = 5
-        cpu.memory.write_byte(0, 0x03);  // Compare with 3
+        cpu.regs.ax = 0x0005; // AL = 5
+        cpu.memory.write_byte(0, 0x03); // Compare with 3
         assert!(cpu.cmp_al_imm8().is_ok());
-        assert!(cpu.regs.flags.get_carry() == false);  // 5 > 3, no borrow needed
-        assert!(cpu.regs.flags.get_zero() == false);   // Result is not zero
+        assert!(cpu.regs.flags.get_carry() == false); // 5 > 3, no borrow needed
+        assert!(cpu.regs.flags.get_zero() == false); // Result is not zero
     }
 
     #[test]
@@ -479,13 +478,13 @@ mod tests {
         // Result should be 2 * 3 = 6
         assert_eq!(cpu.regs.get_ax(), 6);
         // Check flags
-        assert!(!cpu.regs.flags.get_carry());    // No overflow
+        assert!(!cpu.regs.flags.get_carry()); // No overflow
         assert!(!cpu.regs.flags.get_overflow()); // No overflow
-        assert!(!cpu.regs.flags.get_sign());     // Result is positive
-        assert!(!cpu.regs.flags.get_zero());     // Result is not zero
+        assert!(!cpu.regs.flags.get_sign()); // Result is positive
+        assert!(!cpu.regs.flags.get_zero()); // Result is not zero
 
         // Test negative numbers
-        cpu.regs.set_ax(0xFFFE);  // -2 in two's complement
+        cpu.regs.set_ax(0xFFFE); // -2 in two's complement
         cpu.memory.write_byte(0, 0xC0);
         cpu.memory.write_word(1, 3);
         assert!(cpu.imul_r16_rm16_imm16().is_ok());
@@ -493,7 +492,7 @@ mod tests {
         assert_eq!(cpu.regs.get_ax(), 0xFFFA);
         assert!(!cpu.regs.flags.get_carry());
         assert!(!cpu.regs.flags.get_overflow());
-        assert!(cpu.regs.flags.get_sign());      // Result is negative
+        assert!(cpu.regs.flags.get_sign()); // Result is negative
         assert!(!cpu.regs.flags.get_zero());
     }
 
@@ -502,7 +501,7 @@ mod tests {
         let mut cpu = setup_cpu();
         cpu.regs.flags.set_carry(true);
         assert!(cpu.salc().is_ok());
-        assert_eq!(cpu.regs.ax & 0xFF, 0xFF);  // AL should be set to 0xFF when carry is set
+        assert_eq!(cpu.regs.ax & 0xFF, 0xFF); // AL should be set to 0xFF when carry is set
     }
 
     #[test]
@@ -518,8 +517,8 @@ mod tests {
         assert_eq!(cpu.regs.get_ah(), 2);
         assert_eq!(cpu.regs.get_al(), 8);
         // Check flags
-        assert!(!cpu.regs.flags.get_sign());  // Result is positive
-        assert!(!cpu.regs.flags.get_zero());  // Result is not zero
+        assert!(!cpu.regs.flags.get_sign()); // Result is positive
+        assert!(!cpu.regs.flags.get_zero()); // Result is not zero
         assert!(cpu.regs.flags.get_parity()); // 8 has even parity
 
         // Test with AL = 99 (max valid BCD value)

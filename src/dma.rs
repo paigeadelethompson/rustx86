@@ -33,6 +33,12 @@ pub struct DMAController {
     mask: u8,
 }
 
+impl Default for DMAController {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DMAController {
     #[allow(dead_code)]
     pub fn new() -> Self {
@@ -232,11 +238,11 @@ mod tests {
     #[test]
     fn test_dma_channel_registers() {
         let mut controller = DMAController::new();
-        
+
         // Test writing to channel 0 registers
         controller.write_port(0x00, 0x12); // Base address low byte
         controller.write_port(0x01, 0x34); // Base address high byte
-        
+
         assert_eq!(controller.channels[0].current_address, 0x3412);
         assert_eq!(controller.channels[0].base_address, 0x3412);
     }
@@ -244,11 +250,11 @@ mod tests {
     #[test]
     fn test_dma_mode_register() {
         let mut controller = DMAController::new();
-        
+
         // Set mode for channel 0: single transfer, read, channel 0
         controller.write_port(0x0B, 0x44);
         assert_eq!(controller.channels[0].mode, 0x44);
-        
+
         // Set mode for channel 1: block transfer, write, channel 1
         controller.write_port(0x0B, 0x49);
         assert_eq!(controller.channels[1].mode, 0x49);
@@ -257,11 +263,11 @@ mod tests {
     #[test]
     fn test_dma_mask_register() {
         let mut controller = DMAController::new();
-        
+
         // Unmask channel 0
         controller.write_port(0x0A, 0x00);
         assert!(!controller.channels[0].mask);
-        
+
         // Mask channel 0
         controller.write_port(0x0A, 0x04);
         assert!(controller.channels[0].mask);
@@ -270,11 +276,11 @@ mod tests {
     #[test]
     fn test_dma_page_registers() {
         let mut controller = DMAController::new();
-        
+
         // Set page register for channel 0
         controller.write_port(0x80, 0x12);
         assert_eq!(controller.channels[0].page, 0x12);
-        
+
         // Set page register for channel 3
         controller.write_port(0x83, 0x34);
         assert_eq!(controller.channels[3].page, 0x34);
@@ -285,17 +291,17 @@ mod tests {
         let mut controller = DMAController::new();
         let mut memory = vec![0u8; 1024];
         let io_buffer = vec![0xAA, 0xBB, 0xCC];
-        
+
         // Setup channel 0 for transfer
         controller.write_port(0x0A, 0x00); // Unmask channel 0
         controller.write_port(0x0B, 0x44); // Single transfer mode
         controller.write_port(0x00, 0x00); // Base address low
         controller.write_port(0x01, 0x00); // Base address high
         controller.write_port(0x80, 0x00); // Page register
-        
+
         // Perform transfer
         assert!(controller.transfer(0, &mut memory, &io_buffer));
-        
+
         // Verify transfer
         assert_eq!(memory[0], 0xAA);
     }
@@ -303,14 +309,14 @@ mod tests {
     #[test]
     fn test_dma_master_clear() {
         let mut controller = DMAController::new();
-        
+
         // Setup some state
         controller.write_port(0x0B, 0x44); // Set mode
         controller.write_port(0x0A, 0x00); // Unmask channel
-        
+
         // Perform master clear
         controller.write_port(0x0D, 0);
-        
+
         // Verify reset state
         assert_eq!(controller.command, 0);
         assert_eq!(controller.status, 0);

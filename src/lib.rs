@@ -28,4 +28,4 @@ pub use bios::{init_bios_data_area, init_bios_interrupts};
 pub use cpu::Cpu;
 pub use disk::DiskImage;
 pub use memory::SystemMemory;
-pub use serial::Serial; 
+pub use serial::Serial;

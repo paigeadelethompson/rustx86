@@ -4,8 +4,6 @@
 use crate::cpu::Cpu;
 use chrono::{Datelike, Timelike};
 use std::io::Write;
-use std::path::PathBuf;
-use crate::disk::DiskImage;
 
 #[allow(dead_code)]
 const SERIAL_PORT: u16 = 0x3F8; // COM1 port
@@ -456,10 +454,10 @@ fn handle_time_interrupt(cpu: &mut Cpu) -> Result<(), String> {
 mod tests {
     use super::*;
     use crate::cpu::Cpu;
+    use crate::disk::DiskImage;
     use crate::memory::SystemMemory;
     use crate::serial::Serial;
     use std::path::PathBuf;
-    use crate::disk::DiskImage;
 
     fn setup_test_cpu() -> Cpu {
         let memory = SystemMemory::new(1024 * 1024); // 1MB RAM
@@ -474,11 +472,11 @@ mod tests {
     #[test]
     fn test_bios_interrupt_vectors() {
         let mut cpu = setup_test_cpu();
-        
+
         // Test INT 10h vector (Video Services)
         assert_eq!(cpu.memory.read_word(0x40), video_services_offset());
         assert_eq!(cpu.memory.read_word(0x42), bios_seg());
-        
+
         // Test INT 14h vector (Serial Services)
         assert_eq!(cpu.memory.read_word(0x50), serial_services_offset());
         assert_eq!(cpu.memory.read_word(0x52), bios_seg());
@@ -487,13 +485,13 @@ mod tests {
     #[test]
     fn test_bios_data_area() {
         let mut cpu = setup_test_cpu();
-        
+
         // Test equipment list
         assert_eq!(cpu.memory.read_word(0x410), 0x0001);
-        
+
         // Test base memory size
         assert_eq!(cpu.memory.read_word(0x413), 640);
-        
+
         // Test COM port addresses
         assert_eq!(cpu.memory.read_word(0x400), 0x3F8); // COM1
         assert_eq!(cpu.memory.read_word(0x402), 0x2F8); // COM2
@@ -504,13 +502,13 @@ mod tests {
     #[test]
     fn test_serial_interrupt() {
         let mut cpu = setup_test_cpu();
-        
+
         // Test serial port initialization (AH=0)
         cpu.regs.set_ah(0x00);
         cpu.regs.set_dx(0); // COM1
         assert!(handle_serial_interrupt(&mut cpu).is_ok());
         assert_eq!(cpu.regs.get_ah(), 0); // Success
-        
+
         // Test serial port write (AH=1)
         cpu.regs.set_ah(0x01);
         cpu.regs.set_al(b'A'); // Character to send
@@ -521,12 +519,12 @@ mod tests {
     #[test]
     fn test_disk_interrupt() {
         let mut cpu = setup_test_cpu();
-        
+
         // Test disk reset (AH=0)
         cpu.regs.set_ah(0x00);
         assert!(handle_disk_interrupt(&mut cpu).is_ok());
         assert!(!cpu.regs.flags.get_carry()); // Success
-        
+
         // Test get drive parameters (AH=0xC0)
         cpu.regs.set_ah(0xC0);
         cpu.regs.set_dl(0x80); // Hard disk
@@ -538,17 +536,17 @@ mod tests {
     #[test]
     fn test_time_services() {
         let mut cpu = setup_test_cpu();
-        
+
         // Test get system time (AH=0)
         cpu.regs.set_ah(0x00);
         assert!(handle_time_interrupt(&mut cpu).is_ok());
         assert!(!cpu.regs.flags.get_carry());
-        
+
         // Test get RTC time (AH=2)
         cpu.regs.set_ah(0x02);
         assert!(handle_time_interrupt(&mut cpu).is_ok());
         assert!(!cpu.regs.flags.get_carry());
-        
+
         // Test get RTC date (AH=4)
         cpu.regs.set_ah(0x04);
         assert!(handle_time_interrupt(&mut cpu).is_ok());

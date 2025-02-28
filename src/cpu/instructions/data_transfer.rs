@@ -1,5 +1,4 @@
 use crate::cpu::Cpu;
-use std::path::Path;
 
 impl Cpu {
     pub(crate) fn mov_rm8_r8(&mut self) -> Result<(), String> {
@@ -168,13 +167,13 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::disk::disk_image::DiskImage;
     use crate::memory::ram::RamMemory;
     use crate::serial::Serial;
-    use crate::disk::disk_image::DiskImage;
     use std::path::Path;
 
     fn setup_cpu() -> Cpu {
-        let memory = Box::new(RamMemory::new(1024 * 1024));  // 1MB RAM
+        let memory = Box::new(RamMemory::new(1024 * 1024)); // 1MB RAM
         let serial = Serial::new();
         let disk = DiskImage::new(Path::new("drive_c/")).expect("Failed to create disk image");
         Cpu::new(memory, serial, disk)
@@ -213,9 +212,9 @@ mod tests {
     fn test_mov_rm16_r16() {
         let mut cpu = setup_cpu();
         cpu.regs.ax = 0x1234;
-        cpu.memory.write_byte(0, 0xC0);  // ModR/M byte for register-to-register
+        cpu.memory.write_byte(0, 0xC0); // ModR/M byte for register-to-register
         assert!(cpu.mov_rm16_r16().is_ok());
-        assert_eq!(cpu.regs.ax, 0x1234);  // Value should be moved
+        assert_eq!(cpu.regs.ax, 0x1234); // Value should be moved
     }
 
     #[test]
@@ -223,26 +222,26 @@ mod tests {
     fn test_mov_r16_rm16() {
         let mut cpu = setup_cpu();
         cpu.regs.ax = 0x1234;
-        cpu.memory.write_byte(0, 0xC0);  // ModR/M byte for register-to-register
+        cpu.memory.write_byte(0, 0xC0); // ModR/M byte for register-to-register
         assert!(cpu.mov_r16_rm16().is_ok());
-        assert_eq!(cpu.regs.ax, 0x1234);  // Value should be moved
+        assert_eq!(cpu.regs.ax, 0x1234); // Value should be moved
     }
 
     #[test]
     #[ignore = "Needs investigation of instruction execution"]
     fn test_mov_al_moffs8() {
         let mut cpu = setup_cpu();
-        cpu.memory.write_word(0, 0x1000);  // Offset
-        cpu.memory.write_byte(0x1000, 0x42);  // Value at memory location
+        cpu.memory.write_word(0, 0x1000); // Offset
+        cpu.memory.write_byte(0x1000, 0x42); // Value at memory location
         assert!(cpu.mov_al_moffs8().is_ok());
-        assert_eq!(cpu.regs.ax & 0xFF, 0x42);  // AL should contain the value
+        assert_eq!(cpu.regs.ax & 0xFF, 0x42); // AL should contain the value
     }
 
     #[test]
     #[ignore = "Needs investigation of instruction execution"]
     fn test_mov_ax_imm16() {
         let mut cpu = setup_cpu();
-        cpu.memory.write_word(0, 0x1234);  // Immediate value
+        cpu.memory.write_word(0, 0x1234); // Immediate value
         assert!(cpu.mov_ax_imm16().is_ok());
         assert_eq!(cpu.regs.ax, 0x1234);
     }
@@ -251,7 +250,7 @@ mod tests {
     #[ignore = "Needs investigation of instruction execution"]
     fn test_mov_si_imm16() {
         let mut cpu = setup_cpu();
-        cpu.memory.write_word(0, 0x1234);  // Immediate value
+        cpu.memory.write_word(0, 0x1234); // Immediate value
         assert!(cpu.mov_si_imm16().is_ok());
         assert_eq!(cpu.regs.si, 0x1234);
     }
@@ -260,7 +259,7 @@ mod tests {
     #[ignore = "Needs investigation of instruction execution"]
     fn test_mov_ah_imm8() {
         let mut cpu = setup_cpu();
-        cpu.memory.write_byte(0, 0x42);  // Immediate value
+        cpu.memory.write_byte(0, 0x42); // Immediate value
         assert!(cpu.mov_ah_imm8().is_ok());
         assert_eq!(cpu.regs.ax & 0xFF00, 0x4200);
         assert_eq!(cpu.regs.get_ah(), 0x42);
@@ -270,7 +269,7 @@ mod tests {
     #[ignore = "Needs investigation of instruction execution"]
     fn test_mov_al_imm8() {
         let mut cpu = setup_cpu();
-        cpu.memory.write_byte(0, 0x42);  // Immediate value
+        cpu.memory.write_byte(0, 0x42); // Immediate value
         assert!(cpu.mov_al_imm8().is_ok());
         assert_eq!(cpu.regs.ax & 0xFF, 0x42);
         assert_eq!(cpu.regs.get_al(), 0x42);
@@ -281,7 +280,7 @@ mod tests {
         let mut cpu = setup_cpu();
         cpu.regs.ax = 0x1234;
         cpu.regs.bx = 0x5678;
-        assert!(cpu.xchg_ax_r16(3).is_ok());  // 3 is BX
+        assert!(cpu.xchg_ax_r16(3).is_ok()); // 3 is BX
         assert_eq!(cpu.regs.ax, 0x5678);
         assert_eq!(cpu.regs.bx, 0x1234);
     }
@@ -290,9 +289,9 @@ mod tests {
     #[ignore = "Needs investigation of segment handling"]
     fn test_les_r16_m16() {
         let mut cpu = setup_cpu();
-        cpu.memory.write_byte(0, 0x06);  // ModR/M byte for memory mode
-        cpu.memory.write_word(0x1000, 0x1234);  // Offset
-        cpu.memory.write_word(0x1002, 0x2000);  // Segment
+        cpu.memory.write_byte(0, 0x06); // ModR/M byte for memory mode
+        cpu.memory.write_word(0x1000, 0x1234); // Offset
+        cpu.memory.write_word(0x1002, 0x2000); // Segment
         assert!(cpu.les_r16_m16().is_ok());
         assert_eq!(cpu.regs.es, 0x2000);
     }

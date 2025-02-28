@@ -30,7 +30,7 @@ mod tests {
     use crate::memory::ram::RamMemory;
 
     struct TestMemory {
-        data: Vec<u8>
+        data: Vec<u8>,
     }
 
     impl Memory for TestMemory {
@@ -53,8 +53,10 @@ mod tests {
 
     #[test]
     fn test_memory_word_operations() {
-        let mut mem = TestMemory { data: vec![0; 1024] };
-        
+        let mut mem = TestMemory {
+            data: vec![0; 1024],
+        };
+
         // Test write_word
         mem.write_word(0x100, 0x1234);
         assert_eq!(mem.data[0x100], 0x34); // Low byte
@@ -66,8 +68,10 @@ mod tests {
 
     #[test]
     fn test_memory_byte_operations() {
-        let mut mem = TestMemory { data: vec![0; 1024] };
-        
+        let mut mem = TestMemory {
+            data: vec![0; 1024],
+        };
+
         // Test write_byte
         mem.write_byte(0x200, 0xAB);
         assert_eq!(mem.data[0x200], 0xAB);
@@ -78,8 +82,10 @@ mod tests {
 
     #[test]
     fn test_memory_sequential_operations() {
-        let mut mem = TestMemory { data: vec![0; 1024] };
-        
+        let mut mem = TestMemory {
+            data: vec![0; 1024],
+        };
+
         // Write sequential bytes
         mem.write_byte(0x300, 0x12);
         mem.write_byte(0x301, 0x34);

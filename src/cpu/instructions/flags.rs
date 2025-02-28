@@ -1,5 +1,4 @@
 use crate::cpu::Cpu;
-use std::path::Path;
 
 impl Cpu {
     pub(crate) fn cli(&mut self) -> Result<(), String> {
@@ -69,12 +68,12 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::disk::disk_image::DiskImage;
     use crate::memory::ram::RamMemory;
     use crate::serial::Serial;
-    use crate::disk::disk_image::DiskImage;
 
     fn setup_cpu() -> Cpu {
-        let memory = Box::new(RamMemory::new(1024 * 1024));  // 1MB RAM
+        let memory = Box::new(RamMemory::new(1024 * 1024)); // 1MB RAM
         let serial = Serial::new();
         let disk = DiskImage::new(Path::new("drive_c/")).expect("Failed to create disk image");
         Cpu::new(memory, serial, disk)
@@ -142,7 +141,7 @@ mod tests {
     #[test]
     fn test_sahf() {
         let mut cpu = setup_cpu();
-        cpu.regs.ax = 0x5500;  // Set AH to 0x55
+        cpu.regs.ax = 0x5500; // Set AH to 0x55
         assert!(cpu.sahf().is_ok());
         // Check that flags were set from AH
         assert_eq!(cpu.regs.flags.as_byte() & 0xD5, 0x55 & 0xD5);
@@ -166,7 +165,10 @@ mod tests {
         cpu.regs.sp = 0x2000;
         let flags_value = cpu.regs.flags.as_u16();
         assert!(cpu.pushf().is_ok());
-        assert_eq!(cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE), flags_value);
+        assert_eq!(
+            cpu.memory.read_word((cpu.regs.ss as u32) << 4 | 0x1FFE),
+            flags_value
+        );
         assert_eq!(cpu.regs.sp, 0x1FFE);
     }
 
@@ -175,8 +177,9 @@ mod tests {
     fn test_popf() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFE;
-        let flags_value = 0x0202;  // Example flags value
-        cpu.memory.write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, flags_value);
+        let flags_value = 0x0202; // Example flags value
+        cpu.memory
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, flags_value);
         assert!(cpu.popf().is_ok());
         assert_eq!(cpu.regs.flags.as_u16(), flags_value);
         assert_eq!(cpu.regs.sp, 0x2000);
