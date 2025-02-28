@@ -1,56 +1,16 @@
 /*
- * DOS Emulator Main Entry Point
- * ============================
+ * DOS Emulator Example
+ * ===================
  *
- * This is the main entry point for the DOS emulator. It handles system initialization
- * and CPU execution while delegating all disk operations to the disk module.
- *
- * Architecture:
- * ------------
- * 1. System Components:
- *    - Memory (1MB RAM)
- *    - BIOS ROM
- *    - Serial Interface
- *    - Disk System
- *    - CPU
- *
- * 2. Initialization Flow:
- *    - Initialize memory and peripherals
- *    - Set up disk system with drive_c path
- *    - Load BIOS ROM
- *    - Initialize CPU with all components
- *    - Set up BIOS interrupts and data area
- *
- * 3. Disk Handling:
- *    All disk operations are handled by the disk module, including:
- *    - MBR loading and execution
- *    - Partition table management
- *    - Boot sector loading
- *    - FAT filesystem middleware
- *
- * 4. Execution:
- *    The main loop runs the CPU until either:
- *    - The CPU halts normally
- *    - An error occurs
- *    - Maximum cycle count is reached
- *
- * This design separates core emulation from disk handling, allowing the disk
- * module to manage all filesystem interactions independently.
+ * This example demonstrates how to use the DOS emulator library to create
+ * a complete emulation environment.
  */
 
-mod bios;
-mod cpu;
-mod disk;
-mod dma;
-mod memory;
-mod rom;
-mod serial;
-
-use crate::bios::{init_bios_data_area, init_bios_interrupts};
-use crate::cpu::Cpu;
-use crate::disk::{DiskImage, PARTITION_TABLE_OFFSET};
-use crate::memory::SystemMemory;
-use crate::serial::Serial;
+use dos_emu::{
+    init_bios_data_area, init_bios_interrupts,
+    Cpu, DiskImage, Serial, SystemMemory,
+    disk::PARTITION_TABLE_OFFSET,
+};
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -118,4 +78,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
+} 

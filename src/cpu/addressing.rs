@@ -95,4 +95,92 @@ impl CPU {
             Ok(self.memory.read_word(addr))
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::memory::ram::RamMemory;
+    use crate::serial::Serial;
+    use crate::disk::disk_image::DiskImage;
+    use std::path::Path;
+
+    fn setup_cpu() -> CPU {
+        let memory = Box::new(RamMemory::new(1024 * 1024));
+        let serial = Serial::new();
+        let disk = DiskImage::new(Path::new("drive_c/")).expect("Failed to create disk image");
+        CPU::new(memory, serial, disk)
+    }
+
+    #[test]
+    fn test_mod00_addressing() {
+        let mut cpu = setup_cpu();
+        
+        // Test [BX + SI]
+        cpu.regs.bx = 0x2000;
+        cpu.regs.si = 0x100;
+        let modrm = 0x00; // mod=00, rm=000
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0x2100);
+
+        // Test [BX + DI]
+        cpu.regs.bx = 0x2000;
+        cpu.regs.di = 0x200;
+        let modrm = 0x01; // mod=00, rm=001
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0x2200);
+
+        // Test direct address
+        let modrm = 0x06; // mod=00, rm=110
+        cpu.memory.write_word(cpu.regs.ip as u32, 0x1234);
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0x1234);
+    }
+
+    #[test]
+    fn test_mod01_addressing() {
+        let mut cpu = setup_cpu();
+        
+        // Test [BX + SI + disp8]
+        cpu.regs.bx = 0x2000;
+        cpu.regs.si = 0x100;
+        cpu.memory.write_byte(cpu.regs.ip as u32, 0x10); // disp8 = 0x10
+        let modrm = 0x40; // mod=01, rm=000
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0x2110);
+
+        // Test [BP + DI + disp8]
+        cpu.regs.bp = 0x3000;
+        cpu.regs.di = 0x200;
+        cpu.memory.write_byte(cpu.regs.ip as u32, 0x20); // disp8 = 0x20
+        let modrm = 0x43; // mod=01, rm=011
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0x3220);
+    }
+
+    #[test]
+    fn test_mod10_addressing() {
+        let mut cpu = setup_cpu();
+        
+        // Test [BX + SI + disp16]
+        cpu.regs.bx = 0x2000;
+        cpu.regs.si = 0x100;
+        cpu.memory.write_word(cpu.regs.ip as u32, 0x1000); // disp16 = 0x1000
+        let modrm = 0x80; // mod=10, rm=000
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0x3100);
+
+        // Test [BP + DI + disp16]
+        cpu.regs.bp = 0x3000;
+        cpu.regs.di = 0x200;
+        cpu.memory.write_word(cpu.regs.ip as u32, 0x2000); // disp16 = 0x2000
+        let modrm = 0x83; // mod=10, rm=011
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0x5200);
+    }
+
+    #[test]
+    fn test_mod11_addressing() {
+        let mut cpu = setup_cpu();
+        
+        // Test register addressing
+        let modrm = 0xC0; // mod=11, rm=000 (AL/AX)
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 0);
+        
+        let modrm = 0xC7; // mod=11, rm=111 (BH/DI)
+        assert_eq!(cpu.get_rm_addr(modrm).unwrap(), 7);
+    }
 } 

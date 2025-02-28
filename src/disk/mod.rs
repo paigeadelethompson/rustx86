@@ -22,7 +22,7 @@ pub const FAT16_ROOT_ENTRIES: u16 = 512; // Fixed size root directory
 pub const FAT16_TOTAL_SECTORS: u32 = 4_194_304; // 2GB volume (4194304 * 512 = 2GB)
 pub const FAT16_SECTORS_PER_FAT: u16 = 256; // Each FAT entry is 2 bytes, need enough sectors for 65536 clusters
 
-mod disk_image;
+pub mod disk_image;
 mod mbr;
 
 pub use disk_image::*;

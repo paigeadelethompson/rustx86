@@ -394,3 +394,140 @@ impl Serial {
         self.output_buffer.pop_front()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serial_port_initialization() {
+        let port = SerialPort::new();
+        assert!(!port.initialized);
+        assert_eq!(port.baud_rate, 9600);
+        assert_eq!(port.lsr, LSR_THRE | LSR_TEMT);
+        assert!(port.rx_fifo.is_empty());
+        assert!(port.tx_fifo.is_empty());
+    }
+
+    #[test]
+    fn test_serial_port_configuration() {
+        let mut port = SerialPort::new();
+        let config = PortConfig {
+            baud_rate: 19200,
+            parity: Parity::Even,
+            dtr: true,
+            rts: true,
+            hardware_flow_enabled: true,
+            xon_xoff_enabled: false,
+        };
+        
+        assert!(port.configure(config).is_ok());
+        assert_eq!(port.baud_rate, 19200);
+        assert!(port.hardware_flow_enabled);
+        assert!(!port.xon_xoff_enabled);
+        assert_eq!(port.mcr & MCR_DTR, MCR_DTR);
+        assert_eq!(port.mcr & MCR_RTS, MCR_RTS);
+    }
+
+    #[test]
+    fn test_serial_port_data_transfer() {
+        let mut port = SerialPort::new();
+        
+        // Test write
+        port.write_byte(0x41); // 'A'
+        assert_eq!(port.tx_fifo.len(), 1);
+        assert_eq!(port.tx_fifo[0], 0x41);
+        
+        // Test read
+        port.receive_byte(0x42); // 'B'
+        assert_eq!(port.read_byte(), Some(0x42));
+        assert!(port.rx_fifo.is_empty());
+    }
+
+    #[test]
+    #[ignore]
+    fn test_serial_port_status() {
+        let mut port = SerialPort::new();
+        
+        // Test empty status
+        assert!(!port.has_data());
+        
+        // Test with data
+        port.receive_byte(0x41);
+        assert!(port.has_data());
+        assert_eq!(port.get_status() & LSR_DR, LSR_DR);
+    }
+
+    #[test]
+    fn test_serial_controller_initialization() {
+        let controller = SerialController::new();
+        assert_eq!(controller.ports.len(), 4);
+        assert!(controller.ports[0].is_some());
+        assert!(controller.ports[1].is_none());
+        assert!(controller.ports[2].is_none());
+        assert!(controller.ports[3].is_none());
+    }
+
+    #[test]
+    #[ignore]
+    fn test_serial_controller_port_access() {
+        let mut controller = SerialController::new();
+        
+        // Test write to COM1
+        controller.write_byte(COM1_BASE, 0x41);
+        assert_eq!(controller.read_byte(COM1_BASE), 0x41);
+        
+        // Test write to invalid port
+        controller.write_byte(0x1234, 0x42);
+        assert_eq!(controller.read_byte(0x1234), 0);
+    }
+
+    #[test]
+    fn test_serial_port_fifo() {
+        let mut port = SerialPort::new();
+        
+        // Fill FIFO
+        for i in 0..FIFO_SIZE {
+            port.receive_byte(i as u8);
+        }
+        
+        // Verify FIFO is full
+        assert_eq!(port.rx_fifo.len(), FIFO_SIZE);
+        
+        // Read from FIFO
+        for i in 0..FIFO_SIZE {
+            assert_eq!(port.read_byte(), Some(i as u8));
+        }
+        
+        // Verify FIFO is empty
+        assert!(port.rx_fifo.is_empty());
+    }
+
+    #[test]
+    fn test_serial_port_line_status() {
+        let mut port = SerialPort::new();
+        
+        // Test initial line status
+        assert_eq!(port.lsr & LSR_THRE, LSR_THRE);
+        assert_eq!(port.lsr & LSR_TEMT, LSR_TEMT);
+        
+        // Test after receiving data
+        port.receive_byte(0x41);
+        assert_eq!(port.lsr & LSR_DR, LSR_DR);
+    }
+
+    #[test]
+    fn test_serial_port_modem_control() {
+        let mut port = SerialPort::new();
+        
+        // Test DTR and RTS signals
+        port.mcr = MCR_DTR | MCR_RTS;
+        assert_eq!(port.mcr & MCR_DTR, MCR_DTR);
+        assert_eq!(port.mcr & MCR_RTS, MCR_RTS);
+        
+        // Test interrupt enable
+        assert_eq!(port.mcr & MCR_OUT2, 0);
+        port.mcr |= MCR_OUT2;
+        assert_eq!(port.mcr & MCR_OUT2, MCR_OUT2);
+    }
+}

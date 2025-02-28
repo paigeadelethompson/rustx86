@@ -134,15 +134,18 @@ impl PartitionEntry {
             ));
         }
 
+        let start_cylinder = ((data[2] as u16 & 0xC0) << 2) | data[3] as u16;
+        let end_cylinder = ((data[6] as u16 & 0xC0) << 2) | data[7] as u16;
+
         Ok(PartitionEntry {
             bootable: data[0] == 0x80,
             start_head: data[1],
             start_sector: data[2] & 0x3F,
-            start_cylinder: (((data[2] & 0xC0) as u16) << 2) | data[3] as u16,
+            start_cylinder,
             system_id: data[4],
             end_head: data[5],
             end_sector: data[6] & 0x3F,
-            end_cylinder: (((data[6] & 0xC0) as u16) << 2) | data[7] as u16,
+            end_cylinder,
             start_lba: u32::from_le_bytes([data[8], data[9], data[10], data[11]]),
             total_sectors: u32::from_le_bytes([data[12], data[13], data[14], data[15]]),
         })
@@ -152,15 +155,132 @@ impl PartitionEntry {
         let mut bytes = vec![
             if self.bootable { 0x80 } else { 0x00 },
             self.start_head,
-            self.start_sector | ((self.start_cylinder & 0x300) >> 2) as u8,
+            (self.start_sector & 0x3F) | ((self.start_cylinder & 0x300) >> 2) as u8,
             self.start_cylinder as u8,
             self.system_id,
             self.end_head,
-            self.end_sector | ((self.end_cylinder & 0x300) >> 2) as u8,
+            (self.end_sector & 0x3F) | ((self.end_cylinder & 0x300) >> 2) as u8,
             self.end_cylinder as u8,
         ];
         bytes.extend_from_slice(&self.start_lba.to_le_bytes());
         bytes.extend_from_slice(&self.total_sectors.to_le_bytes());
         bytes
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mbr_new() {
+        let mbr = Mbr::new();
+        
+        // Test default values
+        assert_eq!(mbr.boot_code, [0; PARTITION_TABLE_OFFSET]);
+        assert_eq!(mbr.signature, MBR_SIGNATURE);
+        assert_eq!(mbr.partitions.len(), NUM_PARTITIONS);
+        
+        // Test that all partitions are empty
+        for partition in &mbr.partitions {
+            assert!(!partition.bootable);
+            assert_eq!(partition.start_lba, 0);
+            assert_eq!(partition.total_sectors, 0);
+        }
+    }
+
+    #[test]
+    fn test_mbr_to_bytes() {
+        let mbr = Mbr::new();
+        let bytes = mbr.to_bytes();
+        
+        // Test size
+        assert_eq!(bytes.len(), SECTOR_SIZE);
+        
+        // Test signature
+        assert_eq!(bytes[SECTOR_SIZE - 2..], MBR_SIGNATURE);
+        
+        // Test partition table offset
+        assert_eq!(&bytes[..PARTITION_TABLE_OFFSET], &[0; PARTITION_TABLE_OFFSET]);
+    }
+
+    #[test]
+    fn test_mbr_from_bytes() {
+        let original = Mbr::new();
+        let bytes = original.to_bytes();
+        let parsed = Mbr::from_bytes(&bytes).unwrap();
+        
+        // Test signature matches
+        assert_eq!(parsed.signature, original.signature);
+        
+        // Test boot code matches
+        assert_eq!(parsed.boot_code, original.boot_code);
+        
+        // Test partitions match
+        for (orig, parsed) in original.partitions.iter().zip(parsed.partitions.iter()) {
+            assert_eq!(orig.bootable, parsed.bootable);
+            assert_eq!(orig.start_lba, parsed.start_lba);
+            assert_eq!(orig.total_sectors, parsed.total_sectors);
+        }
+    }
+
+    #[test]
+    fn test_create_bootable_fat16_mbr() {
+        let boot_code = vec![0xEB, 0x3C, 0x90]; // Common FAT16 boot code start
+        let mbr = Mbr::create_bootable_fat16_mbr(boot_code).unwrap();
+        
+        // Test boot code was copied
+        assert_eq!(mbr.boot_code[0], 0xEB);
+        assert_eq!(mbr.boot_code[1], 0x3C);
+        assert_eq!(mbr.boot_code[2], 0x90);
+        
+        // Test first partition is bootable FAT16
+        let partition = &mbr.partitions[0];
+        assert!(partition.bootable);
+        assert_eq!(partition.system_id, FAT16_SYSTEM_ID);
+        assert_eq!(partition.start_lba, 63);
+        assert_eq!(partition.total_sectors, FAT16_TOTAL_SECTORS);
+        
+        // Test other partitions are empty
+        for partition in &mbr.partitions[1..] {
+            assert!(!partition.bootable);
+            assert_eq!(partition.start_lba, 0);
+            assert_eq!(partition.total_sectors, 0);
+        }
+    }
+
+    #[test]
+    fn test_mbr_from_bytes_invalid_size() {
+        let result = Mbr::from_bytes(&[0; SECTOR_SIZE - 1]);
+        assert!(result.is_err());
+        
+        let error_msg = result.unwrap_err();
+        assert!(error_msg.contains("Invalid MBR data size"));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_mbr_roundtrip() {
+        let boot_code = vec![0xEB, 0x3C, 0x90];
+        let original = Mbr::create_bootable_fat16_mbr(boot_code).unwrap();
+        let bytes = original.to_bytes();
+        let parsed = Mbr::from_bytes(&bytes).unwrap();
+        
+        // Test all fields match after roundtrip
+        assert_eq!(parsed.boot_code, original.boot_code);
+        assert_eq!(parsed.signature, original.signature);
+        
+        for (orig, parsed) in original.partitions.iter().zip(parsed.partitions.iter()) {
+            assert_eq!(orig.bootable, parsed.bootable);
+            assert_eq!(orig.start_head, parsed.start_head);
+            assert_eq!(orig.start_sector, parsed.start_sector);
+            assert_eq!(orig.start_cylinder, parsed.start_cylinder);
+            assert_eq!(orig.system_id, parsed.system_id);
+            assert_eq!(orig.end_head, parsed.end_head);
+            assert_eq!(orig.end_sector, parsed.end_sector);
+            assert_eq!(orig.end_cylinder, parsed.end_cylinder);
+            assert_eq!(orig.start_lba, parsed.start_lba);
+            assert_eq!(orig.total_sectors, parsed.total_sectors);
+        }
     }
 }

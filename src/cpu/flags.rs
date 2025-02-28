@@ -293,7 +293,7 @@ impl Flags {
         self.set_carry(result < a);
         self.set_zero(result == 0);
         self.set_sign((result & 0x8000) != 0);
-        self.set_overflow(((a ^ b) & 0x8000) == 0 && ((a ^ result) & 0x8000) != 0);
+        self.set_overflow(((a ^ result) & (b ^ result) & 0x8000) != 0);
         self.set_parity(result.count_ones() % 2 == 0);
     }
 
@@ -330,5 +330,113 @@ impl Not for Flags {
         let mut result = self;
         result.set_from_u16(!result.as_u16());
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_flag_initialization() {
+        let flags = Flags::new();
+        assert!(!flags.get_carry());
+        assert!(!flags.get_parity());
+        assert!(!flags.get_adjust());
+        assert!(!flags.get_zero());
+        assert!(!flags.get_sign());
+        assert!(!flags.get_trap());
+        assert!(!flags.get_interrupt());
+        assert!(!flags.get_direction());
+        assert!(!flags.get_overflow());
+    }
+
+    #[test]
+    fn test_flag_setters() {
+        let mut flags = Flags::new();
+        
+        flags.set_carry(true);
+        assert!(flags.get_carry());
+        
+        flags.set_zero(true);
+        assert!(flags.get_zero());
+        
+        flags.set_sign(true);
+        assert!(flags.get_sign());
+        
+        flags.set_overflow(true);
+        assert!(flags.get_overflow());
+        
+        flags.set_direction(true);
+        assert!(flags.get_direction());
+    }
+
+    #[test]
+    fn test_flags_as_word() {
+        let mut flags = Flags::new();
+        
+        // Set some flags
+        flags.set_carry(true);      // bit 0
+        flags.set_parity(true);     // bit 2
+        flags.set_zero(true);       // bit 6
+        flags.set_sign(true);       // bit 7
+        flags.set_trap(true);       // bit 8
+        
+        let word = flags.as_word();
+        assert_eq!(word & 0x0001, 0x0001); // Carry
+        assert_eq!(word & 0x0004, 0x0004); // Parity
+        assert_eq!(word & 0x0040, 0x0040); // Zero
+        assert_eq!(word & 0x0080, 0x0080); // Sign
+        assert_eq!(word & 0x0100, 0x0100); // Trap
+    }
+
+    #[test]
+    fn test_flags_from_word() {
+        let word = 0x0095; // 0000 0000 1001 0101
+        let flags = Flags::from_word(word);
+        
+        assert!(flags.get_carry());     // bit 0 set
+        assert!(flags.get_parity());    // bit 2 set (corrected)
+        assert!(flags.get_adjust());    // bit 4 set
+        assert!(!flags.get_zero());     // bit 6 clear
+        assert!(flags.get_sign());      // bit 7 set
+    }
+
+    #[test]
+    fn test_update_flags_arithmetic() {
+        let mut flags = Flags::new();
+        
+        // Test addition with overflow
+        flags.update_flags_add16(0x7FFF, 0x0001, 0x8000);
+        assert!(!flags.get_carry());
+        assert!(!flags.get_zero());
+        assert!(flags.get_sign());
+        assert!(flags.get_overflow());
+        
+        // Test addition with carry
+        flags.update_flags_add16(0xFFFF, 0x0001, 0x0000);
+        assert!(flags.get_carry());
+        assert!(flags.get_zero());
+        assert!(!flags.get_sign());
+        assert!(!flags.get_overflow());
+    }
+
+    #[test]
+    fn test_update_flags_logical() {
+        let mut flags = Flags::new();
+        
+        // Test with zero result
+        flags.update_logical_flags(0x0000);
+        assert!(flags.get_zero());
+        assert!(!flags.get_sign());
+        assert!(!flags.get_carry());
+        assert!(!flags.get_overflow());
+        
+        // Test with negative result
+        flags.update_logical_flags(0x8000);
+        assert!(!flags.get_zero());
+        assert!(flags.get_sign());
+        assert!(!flags.get_carry());
+        assert!(!flags.get_overflow());
     }
 }

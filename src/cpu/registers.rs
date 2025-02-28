@@ -284,3 +284,126 @@ impl Registers {
         self.es = value;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register_initialization() {
+        let regs = Registers::new();
+        assert_eq!(regs.ax, 0);
+        assert_eq!(regs.bx, 0);
+        assert_eq!(regs.cx, 0);
+        assert_eq!(regs.dx, 0);
+        assert_eq!(regs.sp, 0);
+        assert_eq!(regs.bp, 0);
+        assert_eq!(regs.si, 0);
+        assert_eq!(regs.di, 0);
+        assert_eq!(regs.cs, 0xF000); // BIOS segment
+        assert_eq!(regs.ds, 0);
+        assert_eq!(regs.es, 0);
+        assert_eq!(regs.ss, 0);
+        assert_eq!(regs.ip, 0xFFF0); // BIOS entry point
+    }
+
+    #[test]
+    fn test_8bit_register_operations() {
+        let mut regs = Registers::new();
+        
+        // Test high byte operations
+        regs.set_ah(0x12);
+        regs.set_bh(0x34);
+        regs.set_ch(0x56);
+        regs.set_dh(0x78);
+        
+        assert_eq!(regs.get_ah(), 0x12);
+        assert_eq!(regs.get_bh(), 0x34);
+        assert_eq!(regs.get_ch(), 0x56);
+        assert_eq!(regs.get_dh(), 0x78);
+        
+        // Test low byte operations
+        regs.set_al(0x9A);
+        regs.set_bl(0xBC);
+        regs.set_cl(0xDE);
+        regs.set_dl(0xF0);
+        
+        assert_eq!(regs.get_al(), 0x9A);
+        assert_eq!(regs.get_bl(), 0xBC);
+        assert_eq!(regs.get_cl(), 0xDE);
+        assert_eq!(regs.get_dl(), 0xF0);
+        
+        // Verify full 16-bit registers
+        assert_eq!(regs.ax, 0x129A);
+        assert_eq!(regs.bx, 0x34BC);
+        assert_eq!(regs.cx, 0x56DE);
+        assert_eq!(regs.dx, 0x78F0);
+    }
+
+    #[test]
+    fn test_16bit_register_operations() {
+        let mut regs = Registers::new();
+        
+        regs.set_ax(0x1234);
+        regs.set_bx(0x5678);
+        regs.set_cx(0x9ABC);
+        regs.set_dx(0xDEF0);
+        
+        assert_eq!(regs.get_ax(), 0x1234);
+        assert_eq!(regs.get_bx(), 0x5678);
+        assert_eq!(regs.get_cx(), 0x9ABC);
+        assert_eq!(regs.get_dx(), 0xDEF0);
+        
+        // Test high/low byte consistency
+        assert_eq!(regs.get_ah(), 0x12);
+        assert_eq!(regs.get_al(), 0x34);
+        assert_eq!(regs.get_bh(), 0x56);
+        assert_eq!(regs.get_bl(), 0x78);
+    }
+
+    #[test]
+    fn test_segment_register_operations() {
+        let mut regs = Registers::new();
+        
+        // Test segment register access
+        regs.set_es(0x1000);
+        assert_eq!(regs.get_es(), 0x1000);
+        assert_eq!(regs.get_sreg(0), 0x1000); // ES
+        
+        regs.set_sreg(1, 0x2000); // CS
+        assert_eq!(regs.cs, 0x2000);
+        
+        regs.set_sreg(2, 0x3000); // SS
+        assert_eq!(regs.ss, 0x3000);
+        
+        regs.set_sreg(3, 0x4000); // DS
+        assert_eq!(regs.ds, 0x4000);
+    }
+
+    #[test]
+    fn test_register_index_operations() {
+        let mut regs = Registers::new();
+        
+        // Test 8-bit register access by index
+        regs.set_reg8(0, 0x12).unwrap(); // AL
+        regs.set_reg8(1, 0x34).unwrap(); // CL
+        regs.set_reg8(2, 0x56).unwrap(); // DL
+        regs.set_reg8(3, 0x78).unwrap(); // BL
+        
+        assert_eq!(regs.get_reg8(0), 0x12); // AL
+        assert_eq!(regs.get_reg8(1), 0x34); // CL
+        assert_eq!(regs.get_reg8(2), 0x56); // DL
+        assert_eq!(regs.get_reg8(3), 0x78); // BL
+        
+        // Test 16-bit register access by index
+        regs.set_reg16(0, 0x1234).unwrap(); // AX
+        regs.set_reg16(1, 0x5678).unwrap(); // CX
+        regs.set_reg16(2, 0x9ABC).unwrap(); // DX
+        regs.set_reg16(3, 0xDEF0).unwrap(); // BX
+        
+        assert_eq!(regs.get_reg16(0), 0x1234); // AX
+        assert_eq!(regs.get_reg16(1), 0x5678); // CX
+        assert_eq!(regs.get_reg16(2), 0x9ABC); // DX
+        assert_eq!(regs.get_reg16(3), 0xDEF0); // BX
+    }
+}

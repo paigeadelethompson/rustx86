@@ -43,3 +43,65 @@ impl Memory for RamMemory {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ram_initialization() {
+        let ram = RamMemory::new(1024);
+        assert_eq!(ram.memory.len(), 1024);
+        // Memory should be initialized to zero
+        for i in 0..1024 {
+            assert_eq!(ram.memory[i], 0);
+        }
+    }
+
+    #[test]
+    fn test_ram_byte_operations() {
+        let mut ram = RamMemory::new(1024);
+        
+        // Test single byte operations
+        ram.write_byte(0x100, 0xAA);
+        assert_eq!(ram.read_byte(0x100), 0xAA);
+        
+        // Test multiple byte operations
+        ram.write_byte(0x200, 0x12);
+        ram.write_byte(0x201, 0x34);
+        assert_eq!(ram.read_byte(0x200), 0x12);
+        assert_eq!(ram.read_byte(0x201), 0x34);
+    }
+
+    #[test]
+    fn test_ram_word_operations() {
+        let mut ram = RamMemory::new(1024);
+        
+        // Test word write/read
+        ram.write_word(0x300, 0xABCD);
+        assert_eq!(ram.read_word(0x300), 0xABCD);
+        
+        // Verify byte ordering (little-endian)
+        assert_eq!(ram.read_byte(0x300), 0xCD); // Low byte
+        assert_eq!(ram.read_byte(0x301), 0xAB); // High byte
+    }
+
+    #[test]
+    fn test_ram_boundary_operations() {
+        let mut ram = RamMemory::new(1024);
+        
+        // Test operations at start of memory
+        ram.write_word(0, 0x1234);
+        assert_eq!(ram.read_word(0), 0x1234);
+        
+        // Test operations at end of memory
+        ram.write_word(1022, 0x5678);
+        assert_eq!(ram.read_word(1022), 0x5678);
+    }
+
+    #[test]
+    fn test_ram_no_rom() {
+        let ram = RamMemory::new(1024);
+        assert!(!ram.has_valid_rom());
+    }
+}
