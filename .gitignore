@@ -1,0 +1,4 @@
+target/
+emulator.log
+.DS_Store
+drive_c/
