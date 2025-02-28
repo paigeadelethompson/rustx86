@@ -68,6 +68,8 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use crate::cpu::test_utils::setup_test_cpu;
     use crate::disk::disk_image::DiskImage;
     use crate::memory::ram::RamMemory;
     use crate::serial::Serial;
@@ -75,7 +77,7 @@ mod tests {
     fn setup_cpu() -> Cpu {
         let memory = Box::new(RamMemory::new(1024 * 1024)); // 1MB RAM
         let serial = Serial::new();
-        let disk = DiskImage::new(Path::new("drive_c/")).expect("Failed to create disk image");
+        let disk = DiskImage::new(&PathBuf::from("drive_c/")).expect("Failed to create disk image");
         Cpu::new(memory, serial, disk)
     }
 

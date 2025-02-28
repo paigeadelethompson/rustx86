@@ -385,3 +385,19 @@ impl fmt::Debug for Cpu {
         )
     }
 }
+
+#[cfg(test)]
+pub(crate) mod test_utils {
+    use super::*;
+    use crate::disk::DiskImage;
+    use crate::memory::ram::RamMemory;
+    use crate::serial::Serial;
+    use std::path::PathBuf;
+
+    pub fn setup_test_cpu() -> Cpu {
+        let memory = Box::new(RamMemory::new(1024 * 1024)); // 1MB RAM
+        let serial = Serial::new();
+        let disk = DiskImage::new(&PathBuf::from("drive_c")).expect("Failed to create disk image");
+        Cpu::new(memory, serial, disk)
+    }
+}
