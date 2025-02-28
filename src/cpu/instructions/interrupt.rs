@@ -39,11 +39,19 @@ impl Cpu {
         let new_ip = self.pop_word()?;
         let new_cs = self.pop_word()?;
         let flags = self.pop_word()?;
-
+        
+        println!("IRET: Popped IP=0x{:04X}, CS=0x{:04X}, FLAGS=0x{:04X}", new_ip, new_cs, flags);
+        
+        // Set flags, ensuring reserved bits 1 and 3 are set
+        let flags_with_reserved = flags | 0x000A; // Set bits 1 and 3
+        println!("IRET: Setting flags with reserved bits: 0x{:04X}", flags_with_reserved);
+        
         self.regs.ip = new_ip;
         self.regs.cs = new_cs;
-        self.regs.flags.set_from_word(flags);
-
+        self.regs.flags.set_from_word(flags_with_reserved);
+        
+        println!("IRET: Final flags value: 0x{:04X}", self.regs.flags.as_word());
+        
         Ok(())
     }
 }
@@ -82,7 +90,7 @@ mod tests {
         assert!(cpu.int(interrupt_num).is_ok());
 
         // Check that flags and return address were pushed
-        let sp = (cpu.regs.sp as u32);
+        let sp = cpu.regs.sp as u32;
         assert_eq!(cpu.memory.read_word((cpu.regs.ss as u32) << 4 | sp), 0x2000); // IP
         assert_eq!(
             cpu.memory.read_word((cpu.regs.ss as u32) << 4 | (sp + 2)),
@@ -99,25 +107,24 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of flags handling"]
     fn test_iret() {
         let mut cpu = setup_cpu();
         cpu.regs.sp = 0x1FFA;
 
-        // Push test values onto stack
+        // Push test values onto stack in correct order (IP, CS, FLAGS)
         cpu.memory
-            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFA, 0x0202); // Flags with IF set
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x0202); // Flags with IF set
         cpu.memory
             .write_word((cpu.regs.ss as u32) << 4 | 0x1FFC, 0x2000); // CS
         cpu.memory
-            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFE, 0x3000); // IP
+            .write_word((cpu.regs.ss as u32) << 4 | 0x1FFA, 0x3000); // IP
 
         assert!(cpu.iret().is_ok());
 
         // Check that values were popped correctly
         assert_eq!(cpu.regs.ip, 0x3000);
         assert_eq!(cpu.regs.cs, 0x2000);
-        assert_eq!(cpu.regs.flags.as_word() & 0x0202, 0x0202); // Check IF and reserved bit
+        assert_eq!(cpu.regs.flags.as_u16() & 0x0202, 0x0202); // Check IF and reserved bit
         assert_eq!(cpu.regs.sp, 0x2000);
     }
 

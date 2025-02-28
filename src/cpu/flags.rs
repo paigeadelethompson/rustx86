@@ -144,9 +144,13 @@ impl Flags {
         if self.carry {
             result |= 0x0001;
         }
+        // Reserved bit 1 is always 1
+        result |= 0x0002;
         if self.parity {
             result |= 0x0004;
         }
+        // Reserved bit 3 is always 1
+        result |= 0x0008;
         if self.adjust {
             result |= 0x0010;
         }
@@ -173,7 +177,9 @@ impl Flags {
 
     pub fn set_from_u16(&mut self, value: u16) {
         self.carry = (value & 0x0001) != 0;
+        // Skip reserved bit 1
         self.parity = (value & 0x0004) != 0;
+        // Skip reserved bit 3
         self.adjust = (value & 0x0010) != 0;
         self.zero = (value & 0x0040) != 0;
         self.sign = (value & 0x0080) != 0;

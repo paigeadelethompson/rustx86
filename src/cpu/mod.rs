@@ -124,6 +124,7 @@ impl Cpu {
 
         if mod_bits == 3 {
             // Register operand
+            println!("get_rm8: Register mode, rm={}", rm);
             Ok(self.regs.get_reg8(rm))
         } else {
             // Memory operand
@@ -133,9 +134,9 @@ impl Cpu {
                 2 | 3 | 6 => self.regs.ss, // BP-based addressing uses SS
                 _ => self.regs.ds,         // Other cases use DS
             };
-            Ok(self
-                .memory
-                .read_byte(self.get_physical_address(segment, addr as u16)))
+            let physical_addr = self.get_physical_address(segment, addr as u16);
+            println!("get_rm8: Memory mode, addr={:#x}, physical_addr={:#x}", addr, physical_addr);
+            Ok(self.memory.read_byte(physical_addr))
         }
     }
 
@@ -145,6 +146,7 @@ impl Cpu {
 
         if mod_bits == 3 {
             // Register operand
+            println!("write_rm8: Register mode, rm={}, value={:#x}", rm, value);
             self.regs.set_reg8(rm, value)?;
         } else {
             // Memory operand
@@ -154,8 +156,9 @@ impl Cpu {
                 2 | 3 | 6 => self.regs.ss, // BP-based addressing uses SS
                 _ => self.regs.ds,         // Other cases use DS
             };
-            self.memory
-                .write_byte(self.get_physical_address(segment, addr as u16), value);
+            let physical_addr = self.get_physical_address(segment, addr as u16);
+            println!("write_rm8: Memory mode, addr={:#x}, physical_addr={:#x}, value={:#x}", addr, physical_addr, value);
+            self.memory.write_byte(physical_addr, value);
         }
         Ok(())
     }
@@ -389,6 +392,7 @@ impl fmt::Debug for Cpu {
 #[cfg(test)]
 pub(crate) mod test_utils {
     use super::*;
+    use crate::bios::{init_bios_data_area, init_bios_interrupts};
     use crate::disk::DiskImage;
     use crate::memory::ram::RamMemory;
     use crate::serial::Serial;
@@ -398,6 +402,9 @@ pub(crate) mod test_utils {
         let memory = Box::new(RamMemory::new(1024 * 1024)); // 1MB RAM
         let serial = Serial::new();
         let disk = DiskImage::new(&PathBuf::from("drive_c")).expect("Failed to create disk image");
-        Cpu::new(memory, serial, disk)
+        let mut cpu = Cpu::new(memory, serial, disk);
+        init_bios_interrupts(&mut cpu);
+        init_bios_data_area(&mut cpu);
+        cpu
     }
 }

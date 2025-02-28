@@ -3,9 +3,13 @@ use crate::cpu::Cpu;
 impl Cpu {
     pub fn add_rm8_r8(&mut self) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
+        println!("ModR/M byte: 0x{:02X}", modrm);
         let rm_val = self.get_rm8(modrm)?;
+        println!("rm_val (destination): 0x{:02X}", rm_val);
         let reg_val = self.regs.get_reg8((modrm >> 3) & 0x07);
+        println!("reg_val (source): 0x{:02X}", reg_val);
         let (result, carry) = rm_val.overflowing_add(reg_val);
+        println!("result: 0x{:02X}", result);
         self.write_rm8(modrm, result)?;
         self.update_flags_add(rm_val, reg_val, result, carry);
         Ok(())
@@ -13,9 +17,13 @@ impl Cpu {
 
     pub fn add_rm16_r16(&mut self) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
+        println!("ModR/M byte: 0x{:02X}", modrm);
         let rm_val = self.get_rm16(modrm)?;
+        println!("rm_val (destination): 0x{:04X}", rm_val);
         let reg_val = self.regs.get_reg16((modrm >> 3) & 0x07);
+        println!("reg_val (source): 0x{:04X}", reg_val);
         let (result, carry) = rm_val.overflowing_add(reg_val);
+        println!("result: 0x{:04X}", result);
         self.write_rm16(modrm, result)?;
         self.update_flags_add16(rm_val, reg_val, result, carry);
         Ok(())
@@ -23,8 +31,11 @@ impl Cpu {
 
     pub fn add_al_imm8(&mut self) -> Result<(), String> {
         let imm8 = self.fetch_byte()?;
+        println!("Immediate value: 0x{:02X}", imm8);
         let al = self.regs.get_al();
+        println!("AL value: 0x{:02X}", al);
         let (result, carry) = al.overflowing_add(imm8);
+        println!("Result: 0x{:02X}", result);
         self.regs.set_al(result);
         self.update_flags_add(al, imm8, result, carry);
         Ok(())
@@ -41,19 +52,17 @@ impl Cpu {
 
     pub fn adc_r8_rm8(&mut self) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
-        let rm_val = self.get_rm8(modrm)?;
-        let reg = (modrm >> 3) & 0x07;
-        let reg_val = self.regs.get_reg8(reg);
+        let dest = self.get_rm8(modrm)?;
+        let src = self.regs.get_reg8(modrm >> 3 & 0x7);
         let carry = if self.regs.flags.get_carry() { 1 } else { 0 };
-
-        // First add the carry to reg_val
-        let (temp, carry1) = reg_val.overflowing_add(carry);
-        // Then add the result to rm_val
-        let (result, carry2) = temp.overflowing_add(rm_val);
-
-        self.regs.set_reg8(reg, result)?;
-        // Update flags based on the final result
-        self.update_flags_add(reg_val, rm_val, result, carry1 || carry2);
+        println!("ADC: dest={:02X}, src={:02X}, carry={}", dest, src, carry);
+        let (result, carry1) = dest.overflowing_add(src);
+        let (result, carry2) = result.overflowing_add(carry);
+        println!("ADC: result={:02X}, carry1={}, carry2={}", result, carry1, carry2);
+        self.write_rm8(modrm, result)?;
+        self.regs.flags.set_carry(carry1 || carry2);
+        self.regs.flags.set_zero(result == 0);
+        self.regs.flags.set_sign((result as i8) < 0);
         Ok(())
     }
 
@@ -169,25 +178,18 @@ impl Cpu {
     pub fn imul_r16_rm16_imm16(&mut self) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
         let rm_val = self.get_rm16(modrm)?;
-        let imm16 = self.fetch_word()?;
+        let imm = self.fetch_word()?;
+        println!("IMUL: rm_val={:04X}, imm={:04X}", rm_val, imm);
+        let result = (rm_val as i16 as i32) * (imm as i16 as i32);
+        println!("IMUL: result={:08X}", result);
         let reg = (modrm >> 3) & 0x07;
-
-        // Perform signed multiplication
-        let result = (rm_val as i16 as i32) * (imm16 as i16 as i32);
-
-        // Store lower 16 bits in destination register
-        let truncated = result as u16;
-        self.regs.set_reg16(reg, truncated)?;
-
-        // Set flags based on whether the result fits in 16 bits
-        let sign_extended = truncated as i16 as i32;
-        let overflow = sign_extended != result;
-
+        self.regs.set_reg16(reg, result as u16)?;
+        // Set flags based on overflow
+        let overflow = result > 0x7FFF || result < -0x8000;
         self.regs.flags.set_carry(overflow);
         self.regs.flags.set_overflow(overflow);
-        self.regs.flags.set_sign((truncated & 0x8000) != 0);
-        self.regs.flags.set_zero(truncated == 0);
-
+        self.regs.flags.set_sign((result as i16) < 0);
+        self.regs.flags.set_zero(result == 0);
         Ok(())
     }
 
@@ -366,14 +368,20 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_add_rm8_r8() {
         let mut cpu = setup_cpu();
         // Set AL to 5 and AH to 5
         cpu.regs.set_al(5);
         cpu.regs.set_ah(5);
-        // ModR/M byte: 0xC4 = register-to-register, dest=AL (reg 0), src=AH (reg 4)
-        cpu.memory.write_byte(0, 0xC4);
+        // Set CS to 0 so physical address matches IP
+        cpu.regs.cs = 0;
+        // Set IP to a known location
+        cpu.regs.ip = 0x100;
+        // ModR/M byte: 0xE0 = 11 100 000
+        // 11: register-to-register mode
+        // 100: source register is AH (reg 4)
+        // 000: destination register is AL (reg 0)
+        cpu.memory.write_byte(0x100, 0xE0);
         assert!(cpu.add_rm8_r8().is_ok());
         // Result should be AL = AL + AH = 5 + 5 = 10
         assert_eq!(cpu.regs.get_al(), 10);
@@ -384,13 +392,19 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_add_rm16_r16() {
         let mut cpu = setup_cpu();
         // Set AX to 0x0505
         cpu.regs.set_ax(0x0505);
-        // ModR/M byte: 0xC0 = register-to-register, dest=AX (reg 0), src=AX (reg 0)
-        cpu.memory.write_byte(0, 0xC0);
+        // Set CS to 0 so physical address matches IP
+        cpu.regs.cs = 0;
+        // Set IP to a known location
+        cpu.regs.ip = 0x100;
+        // ModR/M byte: 0xC0 = 11 000 000
+        // 11: register-to-register mode
+        // 000: source register is AX (reg 0)
+        // 000: destination register is AX (reg 0)
+        cpu.memory.write_byte(0x100, 0xC0);
         assert!(cpu.add_rm16_r16().is_ok());
         // Result should be 0x0505 + 0x0505 = 0x0A0A
         assert_eq!(cpu.regs.get_ax(), 0x0A0A);
@@ -401,13 +415,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_add_al_imm8() {
         let mut cpu = setup_cpu();
         // Set AL to 5
         cpu.regs.set_al(5);
+        // Set CS to 0 so physical address matches IP
+        cpu.regs.cs = 0;
+        // Set IP to a known location
+        cpu.regs.ip = 0x100;
         // Write immediate value 3 to memory
-        cpu.memory.write_byte(0, 3);
+        cpu.memory.write_byte(0x100, 3);
         // Execute the add_al_imm8 instruction directly
         assert!(cpu.add_al_imm8().is_ok());
         // Result should be 5 + 3 = 8
@@ -419,7 +436,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_adc_r8_rm8() {
         let mut cpu = setup_cpu();
         // Set AL to 5 and AH to 5
@@ -427,8 +443,15 @@ mod tests {
         cpu.regs.set_ah(5);
         // Set carry flag
         cpu.regs.flags.set_carry(true);
-        // ModR/M byte: 0xC4 = register-to-register, dest=AL (reg 0), src=AH (reg 4)
-        cpu.memory.write_byte(0, 0xC4);
+        // Set CS to 0 so physical address matches IP
+        cpu.regs.cs = 0;
+        // Set IP to a known location
+        cpu.regs.ip = 0x100;
+        // ModR/M byte: 0xE0 = 11 100 000
+        // 11: register-to-register mode
+        // 100: source register is AH (reg 4)
+        // 000: destination register is AL (reg 0)
+        cpu.memory.write_byte(0x100, 0xE0);
         assert!(cpu.adc_r8_rm8().is_ok());
         // Result should be AL = AL + AH + carry = 5 + 5 + 1 = 11 (0x0B)
         assert_eq!(cpu.regs.get_al(), 0x0B);
@@ -465,15 +488,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_imul_r16_rm16_imm16() {
         let mut cpu = setup_cpu();
         // Set AX to 2
         cpu.regs.set_ax(2);
+        // Set CS to 0 so physical address matches IP
+        cpu.regs.cs = 0;
+        // Set IP to a known location
+        cpu.regs.ip = 0x100;
         // ModR/M byte: 0xC0 = register-to-register, dest=AX (reg 0), src=AX (reg 0)
-        cpu.memory.write_byte(0, 0xC0);
+        cpu.memory.write_byte(0x100, 0xC0);
         // Immediate value 3
-        cpu.memory.write_word(1, 3);
+        cpu.memory.write_word(0x101, 3);
         assert!(cpu.imul_r16_rm16_imm16().is_ok());
         // Result should be 2 * 3 = 6
         assert_eq!(cpu.regs.get_ax(), 6);
@@ -485,15 +511,18 @@ mod tests {
 
         // Test negative numbers
         cpu.regs.set_ax(0xFFFE); // -2 in two's complement
-        cpu.memory.write_byte(0, 0xC0);
-        cpu.memory.write_word(1, 3);
+        // Reset IP to start of instruction
+        cpu.regs.ip = 0x100;
+        cpu.memory.write_byte(0x100, 0xC0);
+        cpu.memory.write_word(0x101, 3);
         assert!(cpu.imul_r16_rm16_imm16().is_ok());
-        // Result should be -2 * 3 = -6 (0xFFFA)
+        // Result should be -2 * 3 = -6 (0xFFFA in two's complement)
         assert_eq!(cpu.regs.get_ax(), 0xFFFA);
-        assert!(!cpu.regs.flags.get_carry());
-        assert!(!cpu.regs.flags.get_overflow());
+        // Check flags
+        assert!(!cpu.regs.flags.get_carry()); // No overflow
+        assert!(!cpu.regs.flags.get_overflow()); // No overflow
         assert!(cpu.regs.flags.get_sign()); // Result is negative
-        assert!(!cpu.regs.flags.get_zero());
+        assert!(!cpu.regs.flags.get_zero()); // Result is not zero
     }
 
     #[test]
@@ -505,13 +534,15 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_aam() {
         let mut cpu = setup_cpu();
         // Set AL to 28 (decimal)
         cpu.regs.set_al(28);
-        // Write divisor (base 10) to memory
-        cpu.memory.write_byte(0, 10);
+        // Set CS to 0 so physical address matches IP
+        cpu.regs.cs = 0;
+        // Write divisor (base 10) to memory at IP
+        cpu.regs.ip = 0x100; // Set IP to a known location
+        cpu.memory.write_byte(0x100, 10);
         assert!(cpu.aam().is_ok());
         // After AAM: AH = 28 / 10 = 2, AL = 28 % 10 = 8
         assert_eq!(cpu.regs.get_ah(), 2);
@@ -519,11 +550,13 @@ mod tests {
         // Check flags
         assert!(!cpu.regs.flags.get_sign()); // Result is positive
         assert!(!cpu.regs.flags.get_zero()); // Result is not zero
-        assert!(cpu.regs.flags.get_parity()); // 8 has even parity
+        assert!(!cpu.regs.flags.get_parity()); // 8 has odd parity (one bit set)
 
         // Test with AL = 99 (max valid BCD value)
         cpu.regs.set_al(99);
-        cpu.memory.write_byte(0, 10);
+        cpu.regs.cs = 0; // Ensure CS is still 0
+        cpu.regs.ip = 0x200; // Set IP to a new location
+        cpu.memory.write_byte(0x200, 10);
         assert!(cpu.aam().is_ok());
         // After AAM: AH = 99 / 10 = 9, AL = 99 % 10 = 9
         assert_eq!(cpu.regs.get_ah(), 9);
@@ -531,7 +564,9 @@ mod tests {
 
         // Test division by zero
         cpu.regs.set_al(1);
-        cpu.memory.write_byte(0, 0);
+        cpu.regs.cs = 0; // Ensure CS is still 0
+        cpu.regs.ip = 0x300; // Set IP to a new location
+        cpu.memory.write_byte(0x300, 0);
         assert!(cpu.aam().is_err());
     }
 }

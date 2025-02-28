@@ -453,21 +453,7 @@ fn handle_time_interrupt(cpu: &mut Cpu) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cpu::Cpu;
-    use crate::disk::DiskImage;
-    use crate::memory::SystemMemory;
-    use crate::serial::Serial;
-    use std::path::PathBuf;
-
-    fn setup_test_cpu() -> Cpu {
-        let memory = SystemMemory::new(1024 * 1024); // 1MB RAM
-        let serial = Serial::new();
-        let disk = DiskImage::new(&PathBuf::from("test.img")).unwrap();
-        let mut cpu = Cpu::new(Box::new(memory), serial, disk);
-        init_bios_interrupts(&mut cpu);
-        init_bios_data_area(&mut cpu);
-        cpu
-    }
+    use crate::cpu::test_utils::setup_test_cpu;
 
     #[test]
     fn test_bios_interrupt_vectors() {

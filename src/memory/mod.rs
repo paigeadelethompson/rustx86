@@ -27,7 +27,6 @@ pub use system::SystemMemory;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::ram::RamMemory;
 
     struct TestMemory {
         data: Vec<u8>,

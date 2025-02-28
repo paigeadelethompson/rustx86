@@ -3,9 +3,24 @@ use crate::cpu::Cpu;
 impl Cpu {
     pub(crate) fn execute_group1_rm8_imm8(&mut self, _group: u8) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
+        println!("Group1: ModR/M byte = {:#04x}", modrm);
         let rm_val = self.get_rm8(modrm)?;
         let imm = self.fetch_byte()?;
-        let result = match (modrm >> 3) & 0x07 {
+        println!("Group1: rm_val = {:#04x}, imm = {:#04x}", rm_val, imm);
+        let op_type = (modrm >> 3) & 0x07;
+        let op_name = match op_type {
+            0 => "ADD",
+            1 => "OR",
+            2 => "ADC",
+            3 => "SBB",
+            4 => "AND",
+            5 => "SUB",
+            6 => "XOR",
+            7 => "CMP",
+            _ => "INVALID",
+        };
+        println!("Group1: Operation = {}", op_name);
+        let result = match op_type {
             0 => rm_val.wrapping_add(imm), // ADD
             1 => rm_val | imm,             // OR
             2 => rm_val
@@ -24,11 +39,12 @@ impl Cpu {
             }
             _ => return Err("Invalid group1 operation".to_string()),
         };
-        if (modrm >> 3) & 0x07 != 7 {
+        println!("Group1: Result = {:#04x}", result);
+        if op_type != 7 {
             // Don't write result for CMP
             self.write_rm8(modrm, result)?;
         }
-        self.update_flags_arithmetic(rm_val, imm, result, (modrm >> 3) & 0x07 >= 5);
+        self.update_flags_arithmetic(rm_val, imm, result, op_type >= 5);
         Ok(())
     }
 
@@ -138,7 +154,9 @@ impl Cpu {
                 let al = self.regs.get_reg8(0) as i8;
                 let result = (al as i16) * (rm_val as i16);
                 self.regs.ax = result as u16;
-                self.regs.flags.set_carry(!(-0x80..=0x7F).contains(&result));
+                self.regs
+                    .flags
+                    .set_carry(!(-0x80..=0x7F).contains(&result));
                 self.regs
                     .flags
                     .set_overflow(!(-0x80..=0x7F).contains(&result));
@@ -264,18 +282,28 @@ impl Cpu {
 
     pub(crate) fn handle_fe_group(&mut self) -> Result<(), String> {
         let modrm = self.fetch_byte()?;
+        println!("FE Group: ModR/M byte = {:#04x}", modrm);
         let rm_val = self.get_rm8(modrm)?;
-        let result = match (modrm >> 3) & 0x07 {
+        let op_type = (modrm >> 3) & 0x07;
+        let op_name = match op_type {
+            0 => "INC",
+            1 => "DEC",
+            _ => "INVALID",
+        };
+        println!("FE Group: Operation = {}", op_name);
+        println!("FE Group: Initial value = {:#04x}", rm_val);
+        let result = match op_type {
             0 => rm_val.wrapping_add(1), // INC
             1 => rm_val.wrapping_sub(1), // DEC
             _ => return Err("Invalid group3 operation".to_string()),
         };
+        println!("FE Group: Result = {:#04x}", result);
         self.write_rm8(modrm, result)?;
         self.update_flags_arithmetic(
             rm_val,
-            if (modrm >> 3) & 0x07 == 0 { 1 } else { !0 },
+            if op_type == 0 { 1 } else { !0 },
             result,
-            (modrm >> 3) & 0x07 == 1,
+            op_type == 1,
         );
         Ok(())
     }
@@ -358,16 +386,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_execute_group1_rm8_imm8_add() {
         let mut cpu = setup_cpu();
+        cpu.regs.cs = 0;  // Set code segment to 0
+        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
         cpu.regs.ax = 0x0505; // AL = 5
-        cpu.memory.write_byte(0, 0xC0); // ModR/M byte for register-to-register, reg=0 (ADD)
-        cpu.memory.write_byte(1, 0x03); // Immediate value 3
+        cpu.memory.write_byte(0x100, 0xC0); // ModR/M byte for register-to-register, reg=0 (ADD)
+        cpu.memory.write_byte(0x101, 0x03); // Immediate value 3
         assert!(cpu.execute_group1_rm8_imm8(0).is_ok());
         assert_eq!(cpu.regs.get_al(), 0x08); // 5 + 3 = 8
         assert!(!cpu.regs.flags.get_carry());
         assert!(!cpu.regs.flags.get_zero());
+        assert_eq!(cpu.regs.ip, 0x102); // IP should be advanced by 2 bytes
     }
 
     #[test]
@@ -382,24 +412,28 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_handle_fe_group_inc() {
         let mut cpu = setup_cpu();
+        cpu.regs.cs = 0;  // Set code segment to 0
+        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
         cpu.regs.ax = 0x0041; // AL = 0x41
-        cpu.memory.write_byte(0, 0xC0); // ModR/M byte for register-to-register, reg=0 (INC)
+        cpu.memory.write_byte(0x100, 0xC0); // ModR/M byte for register-to-register, reg=0 (INC)
         assert!(cpu.handle_fe_group().is_ok());
         assert_eq!(cpu.regs.get_al(), 0x42);
         assert!(!cpu.regs.flags.get_zero());
+        assert_eq!(cpu.regs.ip, 0x101); // IP should be advanced by 1 byte (ModR/M)
     }
 
     #[test]
-    #[ignore = "Needs investigation of instruction execution"]
     fn test_handle_fe_group_dec() {
         let mut cpu = setup_cpu();
+        cpu.regs.cs = 0;  // Set code segment to 0
+        cpu.regs.ip = 0x100;  // Set instruction pointer to 0x100
         cpu.regs.ax = 0x0042; // AL = 0x42
-        cpu.memory.write_byte(0, 0xC8); // ModR/M byte for register-to-register, reg=1 (DEC)
+        cpu.memory.write_byte(0x100, 0xC8); // ModR/M byte for register-to-register, reg=1 (DEC)
         assert!(cpu.handle_fe_group().is_ok());
         assert_eq!(cpu.regs.get_al(), 0x41);
         assert!(!cpu.regs.flags.get_zero());
+        assert_eq!(cpu.regs.ip, 0x101); // IP should be advanced by 1 byte (ModR/M)
     }
 }
